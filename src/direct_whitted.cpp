@@ -33,11 +33,10 @@ public:
             // source "em" is visible from the intersection point.
             // For that, we create a ray object (shadow ray),
             // and compute the intersection
-            /*
-             *
-             * YOUR CODE HERE
-             *
-             */
+            Ray3f shadowRay(its.p, emitterRecord.wi);
+            if (scene->rayIntersect(shadowRay))
+                continue;
+
             // Finally, we evaluate the BSDF. For that, we need to build
             // a BSDFQueryRecord from the outgoing direction (the direction
             // of the primary ray, in ray.d), and the incoming direction
