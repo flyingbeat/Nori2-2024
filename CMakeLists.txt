@@ -74,6 +74,7 @@ add_executable(nori
   src/block.cpp
   src/chi2test.cpp
   src/common.cpp
+  src/depth.cpp
   src/dielectric.cpp
   src/diffuse.cpp
   src/direct_whitted.cpp
