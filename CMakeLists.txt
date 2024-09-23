@@ -76,6 +76,7 @@ add_executable(nori
   src/common.cpp
   src/dielectric.cpp
   src/diffuse.cpp
+  src/direct_whitted.cpp
   src/environment.cpp  
   src/gui.cpp
   src/independent.cpp
@@ -88,6 +89,7 @@ add_executable(nori
   src/object.cpp
   src/parser.cpp
   src/perspective.cpp
+  src/pointlight.cpp
   src/proplist.cpp
   src/rfilter.cpp
   src/scene.cpp
