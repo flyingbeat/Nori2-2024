@@ -26,13 +26,15 @@ public:
         {
             EmitterQueryRecord emitterRecord(its.mesh->getEmitter(), ray.o, its.p, its.shFrame.n, its.uv);
             Lo += its.mesh->getEmitter()->eval(emitterRecord);
-            return Lo;
         }
 
         EmitterQueryRecord emitterRecord(its.p);
 
+        float pdfEmitter;
         // Get random light in the scene
-        const Emitter *em = scene->sampleEmitter(sampler->next1D(), emitterRecord.pdf);
+        const Emitter *em = scene->sampleEmitter(sampler->next1D(), pdfEmitter);
+        if (em == nullptr || pdfEmitter == 0.0f)
+            return Lo;
 
         // Here we sample the point sources, getting its radiance
         // and direction.
@@ -56,8 +58,7 @@ public:
                                    its.toLocal(emitterRecord.wi), its.uv, ESolidAngle);
         // For each light, we accomulate the incident light times the
         // foreshortening times the BSDF term (i.e. the render equation).
-        Lo += Le * its.shFrame.n.dot(emitterRecord.wi) * its.mesh->getBSDF()->eval(bsdfRecord);
-
+        Lo += Le * its.mesh->getBSDF()->eval(bsdfRecord) * its.shFrame.n.dot(emitterRecord.wi) / (pdfEmitter * emitterRecord.pdf);
         return Lo;
     }
 
