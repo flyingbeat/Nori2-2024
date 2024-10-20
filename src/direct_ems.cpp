@@ -38,11 +38,13 @@ public:
 
         // Here we sample the point sources, getting its radiance
         // and direction.
-        Color3f Le = em->sample(emitterRecord, sampler->next2D(), 0.);
+        Color3f Le = em->sample(emitterRecord, sampler->next2D(), 0.0f);
+
         // Here perform a visibility query, to check whether the light
         // source "em" is visible from the intersection point.
         // For that, we create a ray object (shadow ray),
         // and compute the intersection
+        // V function in equation term
         Ray3f shadowRay(its.p, emitterRecord.wi);
         if (scene->rayIntersect(shadowRay))
             return Lo;
@@ -56,9 +58,15 @@ public:
         // directions are assumed to start from the intersection point.
         BSDFQueryRecord bsdfRecord(its.toLocal(-ray.d),
                                    its.toLocal(emitterRecord.wi), its.uv, ESolidAngle);
-        // For each light, we accomulate the incident light times the
-        // foreshortening times the BSDF term (i.e. the render equation).
-        Lo += Le * its.mesh->getBSDF()->eval(bsdfRecord) * its.shFrame.n.dot(emitterRecord.wi) / (pdfEmitter * emitterRecord.pdf);
+
+        Color3f fr = its.mesh->getBSDF()->eval(bsdfRecord);
+
+        // pΩ(x, x(k) l ) is the product of the pdf of choosing the light source and the pdf of x(k) at the light source.
+        float pOmega = pdfEmitter * emitterRecord.pdf;
+        // calculating the cosin term
+        float cosTheta = std::max(0.0f, its.shFrame.n.dot(emitterRecord.wi));
+
+        Lo += (Le * fr * cosTheta) / pOmega;
         return Lo;
     }
 
