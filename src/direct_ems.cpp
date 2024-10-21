@@ -21,20 +21,18 @@ public:
         if (!scene->rayIntersect(ray, its))
             return scene->getBackground(ray);
 
+        EmitterQueryRecord emitterRecord(its.p);
+
         // Check if the intersected material is an emitter
         if (its.mesh->isEmitter())
         {
             EmitterQueryRecord emitterRecord(its.mesh->getEmitter(), ray.o, its.p, its.shFrame.n, its.uv);
-            Lo += its.mesh->getEmitter()->eval(emitterRecord);
+            return its.mesh->getEmitter()->eval(emitterRecord);
         }
-
-        EmitterQueryRecord emitterRecord(its.p);
 
         float pdfEmitter;
         // Get random light in the scene
         const Emitter *em = scene->sampleEmitter(sampler->next1D(), pdfEmitter);
-        if (em == nullptr || pdfEmitter == 0.0f)
-            return Lo;
 
         // Here we sample the point sources, getting its radiance
         // and direction.
@@ -62,9 +60,9 @@ public:
         Color3f fr = its.mesh->getBSDF()->eval(bsdfRecord);
 
         // pΩ(x, x(k) l ) is the product of the pdf of choosing the light source and the pdf of x(k) at the light source.
-        float pOmega = pdfEmitter * emitterRecord.pdf;
+        float pOmega = pdfEmitter * em->pdf(emitterRecord);
         // calculating the cosin term
-        float cosTheta = std::max(0.0f, its.shFrame.n.dot(emitterRecord.wi));
+        float cosTheta = its.shFrame.n.dot(emitterRecord.wi);
 
         Lo += (Le * fr * cosTheta) / pOmega;
         return Lo;
