@@ -125,6 +125,14 @@ public:
     virtual Color3f eval(const EmitterQueryRecord &lRec) const = 0;
 
     /**
+     * \brief Get the total power of the emitter
+     *
+     * \return
+     *     The total power of the emitter
+     */
+    virtual Color3f power() const = 0;
+
+    /**
      * \brief Virtual destructor
      * */
     virtual ~Emitter() {}

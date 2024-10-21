@@ -99,6 +99,12 @@ public:
 	{
 	}
 
+	// Get the total power of the emitter
+	virtual Color3f power() const
+	{
+		return m_radiance;
+	}
+
 protected:
 	Color3f m_radiance;
 	Bitmap *m_environment;

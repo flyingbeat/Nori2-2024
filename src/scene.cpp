@@ -64,6 +64,9 @@ void Scene::activate()
         m_sampler = static_cast<Sampler *>(
             NoriObjectFactory::createInstance("independent", PropertyList()));
     }
+    for (unsigned int i = 0; i < m_emitters.size(); ++i)
+        m_emitter_pdf.append(m_emitters[i]->power().getLuminance());
+    m_emitter_pdf.normalize();
 
     cout << endl;
     cout << "Configuration: " << toString() << endl;
@@ -73,15 +76,23 @@ void Scene::activate()
 /// Sample emitter
 const Emitter *Scene::sampleEmitter(float rnd, float &pdf) const
 {
-    auto const &n = m_emitters.size();
-    size_t index = std::min(static_cast<size_t>(std::floor(n * rnd)), n - 1);
-    pdf = 1. / float(n);
+    // NAIVE SAMPLING
+    // auto const &n = m_emitters.size();
+    // size_t index = std::min(static_cast<size_t>(std::floor(n * rnd)), n - 1);
+    // pdf = 1. / float(n);
+
+    // IMPORTANCE SAMPLING
+    size_t index = m_emitter_pdf.sample(rnd, pdf);
     return m_emitters[index];
 }
 
 float Scene::pdfEmitter(const Emitter *em) const
 {
-    return 1. / float(m_emitters.size());
+    // NAIVE SAMPLING
+    // return 1. / float(m_emitters.size());
+
+    // IMPORTANCE SAMPLING
+    return 1. / em->power().getLuminance();
 }
 
 void Scene::addChild(NoriObject *obj, const std::string &name)
