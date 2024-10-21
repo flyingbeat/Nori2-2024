@@ -47,6 +47,15 @@ void Mesh::activate()
     }
 
     m_pdf.reserve(m_F.cols());
+
+    // Compute the area of each triangle and initialize the DiscretePDF
+    m_pdf.clear();
+    for (uint32_t i = 0; i < m_F.cols(); ++i)
+    {
+        float area = surfaceArea(i);
+        m_pdf.append(area);
+    }
+    m_pdf.normalize();
 }
 
 float Mesh::surfaceArea(n_UINT index) const
@@ -120,15 +129,43 @@ Point3f Mesh::getCentroid(n_UINT index) const
  */
 void Mesh::samplePosition(const Point2f &sample, Point3f &p, Normal3f &n, Point2f &uv) const
 {
-    throw NoriException("Mesh::samplePosition() is not yet implemented!");
+    Point2f updatedSample = sample;
+    uint32_t triangleIndex = m_pdf.sampleReuse(updatedSample.x());
+
+    const uint32_t idx0 = m_F(0, triangleIndex);
+    const uint32_t idx1 = m_F(1, triangleIndex);
+    const uint32_t idx2 = m_F(2, triangleIndex);
+
+    const Point3f &v0 = m_V.col(idx0);
+    const Point3f &v1 = m_V.col(idx1);
+    const Point3f &v2 = m_V.col(idx2);
+
+    const Normal3f &n0 = m_N.col(idx0);
+    const Normal3f &n1 = m_N.col(idx1);
+    const Normal3f &n2 = m_N.col(idx2);
+
+    const Point2f &uv0 = m_UV.col(idx0);
+    const Point2f &uv1 = m_UV.col(idx1);
+    const Point2f &uv2 = m_UV.col(idx2);
+
+    // Sample barycentric coordinates
+    Point2f barycentric = Warp::squareToUniformTriangle(sample);
+
+    // Interpolate the position
+    p = barycentric.x() * v0 + barycentric.y() * v1 + (1.0f - barycentric.x() - barycentric.y()) * v2;
+
+    // Interpolate the normal
+    n = barycentric.x() * n0 + barycentric.y() * n1 + (1.0f - barycentric.x() - barycentric.y()) * n2;
+    n.normalize();
+
+    // Interpolate the UV coordinates
+    uv = barycentric.x() * uv0 + barycentric.y() * uv1 + (1.0f - barycentric.x() - barycentric.y()) * uv2;
 }
 
 /// Return the surface area of the given triangle
 float Mesh::pdf(const Point3f &p) const
 {
-    throw NoriException("Mesh::pdf() is not yet implemented!");
-
-    return 0.;
+    return 1 / m_pdf.getNormalization();
 }
 
 void Mesh::addChild(NoriObject *obj, const std::string &name)
