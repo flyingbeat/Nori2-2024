@@ -28,7 +28,8 @@ NORI_NAMESPACE_BEGIN
  *
  * The bitmap class provides I/O support using the OpenEXR file format
  */
-class Bitmap : public Eigen::Array<Color3f, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> {
+class Bitmap : public Eigen::Array<Color3f, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
+{
 public:
     typedef Eigen::Array<Color3f, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> Base;
 
@@ -39,7 +40,7 @@ public:
      * to call \ref clear() if necessary
      */
     Bitmap(const Vector2i &size = Vector2i(0, 0))
-        : Base(size.y(), size.x()) { }
+        : Base(size.y(), size.x()) {}
 
     /// Load an OpenEXR file with the specified filename
     Bitmap(const std::string &filename);
@@ -50,7 +51,7 @@ public:
     /// Save the bitmap as a PNG file (with sRGB tonemapping) with the specified filename
     void savePNG(const std::string &filename);
 
-    Color3f eval(const Point2f& uv) const;
+    Color3f eval(const Point2f &uv) const;
 };
 
 /**
@@ -60,7 +61,8 @@ public:
  */
 typedef Eigen::Array<uint8_t, 3, 1> Color3b;
 
-class LDRBitmap : public Eigen::Array<Color3b, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> {
+class LDRBitmap : public Eigen::Array<Color3b, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
+{
 public:
     typedef Eigen::Array<Color3b, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> Base;
 
@@ -70,13 +72,13 @@ public:
      * The contents will initially be undefined, so make sure
      * to call \ref clear() if necessary
      */
-    LDRBitmap(const Vector2i& size = Vector2i(0, 0))
-        : Base(size.y(), size.x()) { }
+    LDRBitmap(const Vector2i &size = Vector2i(0, 0))
+        : Base(size.y(), size.x()) {}
 
     /// Load a PNG file with the specified filename
-    LDRBitmap(const std::string& filename);
+    LDRBitmap(const std::string &filename);
 
-    Color3f eval(const Point2f& uv) const;
+    Color3f eval(const Point2f &uv) const;
 };
 
 NORI_NAMESPACE_END

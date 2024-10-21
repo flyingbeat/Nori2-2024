@@ -18,12 +18,13 @@
 #include <filesystem/resolver.h>
 #include <fstream>
 
-
 NORI_NAMESPACE_BEGIN
 
-class EnvironmentEmitter : public Emitter {
+class EnvironmentEmitter : public Emitter
+{
 public:
-	EnvironmentEmitter(const PropertyList& props) {
+	EnvironmentEmitter(const PropertyList &props)
+	{
 		m_type = EmitterType::EMITTER_ENVIRONMENT;
 		m_environment = 0;
 
@@ -48,7 +49,8 @@ public:
 			delete m_environment;
 	}
 
-	virtual std::string toString() const {
+	virtual std::string toString() const
+	{
 		return tfm::format(
 			"AreaLight[\n"
 			"  radiance = %s,\n"
@@ -59,7 +61,8 @@ public:
 	}
 
 	// We don't assume anything about the visibility of points specified in 'ref' and 'p' in the EmitterQueryRecord.
-	virtual Color3f eval(const EmitterQueryRecord& lRec) const {
+	virtual Color3f eval(const EmitterQueryRecord &lRec) const
+	{
 
 		// This function call can be done by bsdf sampling routines.
 		// Hence the ray was already traced for us - i.e a visibility test was already performed.
@@ -69,32 +72,32 @@ public:
 
 		float phi = atan2(lRec.wi[2], lRec.wi[0]);
 		float theta = acos(lRec.wi[1]);
-		if (phi < 0) phi += 2 * M_PI;
+		if (phi < 0)
+			phi += 2 * M_PI;
 
 		float x = phi / (2 * M_PI);
 		float y = (theta) / M_PI;
 
-
-		return m_environment->eval(Point2f(x, y))* m_radiance;
+		return m_environment->eval(Point2f(x, y)) * m_radiance;
 	}
 
-	virtual Color3f sample(EmitterQueryRecord& lRec, const Point2f& sample, float optional_u) const {
+	virtual Color3f sample(EmitterQueryRecord &lRec, const Point2f &sample, float optional_u) const
+	{
 		throw NoriException("EnvironmentEmitter::sample() is not yet implemented!");
 	}
 
 	// Returns probability with respect to solid angle given by all the information inside the emitterqueryrecord.
 	// Assumes all information about the intersection point is already provided inside.
 	// WARNING: Use with care. Malformed EmitterQueryRecords can result in undefined behavior. Plus no visibility is considered.
-	virtual float pdf(const EmitterQueryRecord& lRec) const {
+	virtual float pdf(const EmitterQueryRecord &lRec) const
+	{
 		throw NoriException("EnvironmentEmitter::pdf() is not yet implemented!");
 	}
 
-
 	// Get the parent mesh
-	void setParent(NoriObject* parent)
+	void setParent(NoriObject *parent)
 	{
 	}
-
 
 protected:
 	Color3f m_radiance;

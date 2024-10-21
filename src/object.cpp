@@ -20,7 +20,8 @@
 
 NORI_NAMESPACE_BEGIN
 
-void NoriObject::addChild(NoriObject *, const std::string& name) {
+void NoriObject::addChild(NoriObject *, const std::string &name)
+{
     throw NoriException(
         "NoriObject::addChild() is not implemented for objects of type '%s'!",
         classTypeName(getClassType()));
@@ -31,7 +32,8 @@ void NoriObject::setParent(NoriObject *) { /* Do nothing */ }
 
 std::map<std::string, NoriObjectFactory::Constructor> *NoriObjectFactory::m_constructors = nullptr;
 
-void NoriObjectFactory::registerClass(const std::string &name, const Constructor &constr) {
+void NoriObjectFactory::registerClass(const std::string &name, const Constructor &constr)
+{
     if (!m_constructors)
         m_constructors = new std::map<std::string, NoriObjectFactory::Constructor>();
     (*m_constructors)[name] = constr;

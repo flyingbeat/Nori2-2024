@@ -23,12 +23,14 @@
 
 NORI_NAMESPACE_BEGIN
 
-class NoriScreen : public nanogui::Screen {
+class NoriScreen : public nanogui::Screen
+{
 public:
     NoriScreen(const ImageBlock &block);
     virtual ~NoriScreen();
 
     void drawContents();
+
 private:
     const ImageBlock &m_block;
     nanogui::GLShader *m_shader = nullptr;

@@ -21,11 +21,12 @@
 #include <filesystem/resolver.h>
 #include <fstream>
 
-
 NORI_NAMESPACE_BEGIN
-class BitmapTexture: public Texture {
+class BitmapTexture : public Texture
+{
 public:
-	BitmapTexture(const PropertyList& props) {
+	BitmapTexture(const PropertyList &props)
+	{
 		m_bitmap = 0;
 
 		m_bitmap_name = props.getString("filename", "null");
@@ -52,7 +53,8 @@ public:
 		m_bitmap = 0;
 	}
 
-	virtual std::string toString() const {
+	virtual std::string toString() const
+	{
 		return tfm::format(
 			"Texture[\n"
 			"  scale = %s,\n"
@@ -62,7 +64,8 @@ public:
 			m_bitmap_name);
 	}
 
-	virtual Color3f eval(const Point2f& uv) const {
+	virtual Color3f eval(const Point2f &uv) const
+	{
 
 		if (!m_bitmap)
 			return m_color;
@@ -72,17 +75,18 @@ public:
 
 protected:
 	Color3f m_color;
-	LDRBitmap* m_bitmap;
+	LDRBitmap *m_bitmap;
 	float m_rotation;
 	Vector2f m_scale;
 
 	std::string m_bitmap_name;
 };
 
-
-class CheckerTexture : public Texture {
+class CheckerTexture : public Texture
+{
 public:
-	CheckerTexture(const PropertyList& props) {
+	CheckerTexture(const PropertyList &props)
+	{
 		m_color1 = props.getColor("color", Color3f(.9));
 		m_color2 = props.getColor("color", Color3f(.1));
 		m_scale[0] = props.getInteger("scalex", 1.f);
@@ -92,18 +96,19 @@ public:
 	{
 	}
 
-	virtual std::string toString() const {
+	virtual std::string toString() const
+	{
 		return tfm::format(
 			"CheckerTexture[\n"
 			"  color1 = %s, color2 = %s\n"
 			"  scale = %s,\n"
 			"]",
-			m_color1.toString(),m_color2.toString(),
-			m_scale.toString()
-			);
+			m_color1.toString(), m_color2.toString(),
+			m_scale.toString());
 	}
 
-	virtual Color3f eval(const Point2f& uv) const {
+	virtual Color3f eval(const Point2f &uv) const
+	{
 		Point2f pos = uv.cwiseProduct(m_scale);
 		int px = pos[0];
 		int py = pos[1];
@@ -115,10 +120,9 @@ public:
 	}
 
 protected:
-	Color3f m_color1,m_color2;
+	Color3f m_color1, m_color2;
 	Point2f m_scale;
 };
-
 
 NORI_REGISTER_CLASS(BitmapTexture, "textmap")
 NORI_REGISTER_CLASS(CheckerTexture, "checker")

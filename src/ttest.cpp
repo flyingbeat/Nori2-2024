@@ -55,9 +55,11 @@ NORI_NAMESPACE_BEGIN
  * 2. that the average radiance received by a camera within some scene
  *    matches a given value (modulo noise).
  */
-class StudentsTTest : public NoriObject {
+class StudentsTTest : public NoriObject
+{
 public:
-    StudentsTTest(const PropertyList &propList) {
+    StudentsTTest(const PropertyList &propList)
+    {
         /* The null hypothesis will be rejected when the associated
            p-value is below the significance level specified here. */
         m_significanceLevel = propList.getFloat("significanceLevel", 0.01f);
@@ -76,35 +78,40 @@ public:
         m_sampleCount = propList.getInteger("sampleCount", 100000);
     }
 
-    virtual ~StudentsTTest() {
+    virtual ~StudentsTTest()
+    {
         for (auto bsdf : m_bsdfs)
             delete bsdf;
         for (auto scene : m_scenes)
             delete scene;
     }
 
-    void addChild(NoriObject *obj, const std::string& name = "none") {
-        switch (obj->getClassType()) {
-            case EBSDF:
-                m_bsdfs.push_back(static_cast<BSDF *>(obj));
-                break;
+    void addChild(NoriObject *obj, const std::string &name = "none")
+    {
+        switch (obj->getClassType())
+        {
+        case EBSDF:
+            m_bsdfs.push_back(static_cast<BSDF *>(obj));
+            break;
 
-            case EScene:
-                m_scenes.push_back(static_cast<Scene *>(obj));
-                break;
+        case EScene:
+            m_scenes.push_back(static_cast<Scene *>(obj));
+            break;
 
-            default:
-                throw NoriException("StudentsTTest::addChild(<%s>) is not supported!",
-                    classTypeName(obj->getClassType()));
+        default:
+            throw NoriException("StudentsTTest::addChild(<%s>) is not supported!",
+                                classTypeName(obj->getClassType()));
         }
     }
 
     /// Invoke a series of t-tests on the provided input
-    void activate() {
+    void activate()
+    {
         int total = 0, passed = 0;
         pcg32 random;
 
-        if (!m_bsdfs.empty()) {
+        if (!m_bsdfs.empty())
+        {
             if (m_references.size() * m_bsdfs.size() != m_angles.size())
                 throw NoriException("Specified a different number of angles and reference values!");
             if (!m_scenes.empty())
@@ -112,8 +119,10 @@ public:
 
             /* Test each registered BSDF */
             int ctr = 0;
-            for (auto bsdf : m_bsdfs) {
-                for (size_t i=0; i<m_references.size(); ++i) {
+            for (auto bsdf : m_bsdfs)
+            {
+                for (size_t i = 0; i < m_references.size(); ++i)
+                {
                     float angle = m_angles[i], reference = m_references[ctr++];
 
                     cout << "------------------------------------------------------" << endl;
@@ -123,28 +132,31 @@ public:
                     BSDFQueryRecord bRec(sphericalDirection(degToRad(angle), 0));
 
                     cout << "Drawing " << m_sampleCount << " samples .. " << endl;
-                    double mean=0, variance = 0;
-                    for (int k=0; k<m_sampleCount; ++k) {
+                    double mean = 0, variance = 0;
+                    for (int k = 0; k < m_sampleCount; ++k)
+                    {
                         Point2f sample(random.nextFloat(), random.nextFloat());
-                        double result = (double) bsdf->sample(bRec, sample).getLuminance();
+                        double result = (double)bsdf->sample(bRec, sample).getLuminance();
 
                         /* Numerically robust online variance estimation using an
                            algorithm proposed by Donald Knuth (TAOCP vol.2, 3rd ed., p.232) */
                         double delta = result - mean;
-                        mean += delta / (double) (k+1);
+                        mean += delta / (double)(k + 1);
                         variance += delta * (result - mean);
                     }
                     variance /= m_sampleCount - 1;
                     std::pair<bool, std::string>
                         result = hypothesis::students_t_test(mean, variance, reference,
-                            m_sampleCount, m_significanceLevel, (int) m_references.size());
+                                                             m_sampleCount, m_significanceLevel, (int)m_references.size());
 
                     if (result.first)
                         ++passed;
                     cout << result.second << endl;
                 }
             }
-        } else {
+        }
+        else
+        {
             if (m_references.size() != m_scenes.size())
                 throw NoriException("Specified a different number of scenes and reference values!");
 
@@ -152,7 +164,8 @@ public:
                 NoriObjectFactory::createInstance("independent", PropertyList()));
 
             int ctr = 0;
-            for (auto scene : m_scenes) {
+            for (auto scene : m_scenes)
+            {
                 const Integrator *integrator = scene->getIntegrator();
                 const Camera *camera = scene->getCamera();
                 float reference = m_references[ctr++];
@@ -164,11 +177,11 @@ public:
                 cout << "Generating " << m_sampleCount << " paths.. " << endl;
 
                 double mean = 0, variance = 0;
-                for (int k=0; k<m_sampleCount; ++k) {
+                for (int k = 0; k < m_sampleCount; ++k)
+                {
                     /* Sample a ray from the camera */
                     Ray3f ray;
-                    Point2f pixelSample = (sampler->next2D().array()
-                        * camera->getOutputSize().cast<float>().array()).matrix();
+                    Point2f pixelSample = (sampler->next2D().array() * camera->getOutputSize().cast<float>().array()).matrix();
                     Color3f value = camera->sampleRay(ray, pixelSample, sampler->next2D());
 
                     /* Compute the incident radiance */
@@ -176,16 +189,16 @@ public:
 
                     /* Numerically robust online variance estimation using an
                        algorithm proposed by Donald Knuth (TAOCP vol.2, 3rd ed., p.232) */
-                    double result = (double) value.getLuminance();
+                    double result = (double)value.getLuminance();
                     double delta = result - mean;
-                    mean += delta / (double) (k+1);
+                    mean += delta / (double)(k + 1);
                     variance += delta * (result - mean);
                 }
                 variance /= m_sampleCount - 1;
 
                 std::pair<bool, std::string>
                     result = hypothesis::students_t_test(mean, variance, reference,
-                        m_sampleCount, m_significanceLevel, (int) m_references.size());
+                                                         m_sampleCount, m_significanceLevel, (int)m_references.size());
 
                 if (result.first)
                     ++passed;
@@ -197,18 +210,19 @@ public:
             throw std::runtime_error("Some tests failed :(");
     }
 
-    std::string toString() const {
+    std::string toString() const
+    {
         return tfm::format(
             "StudentsTTest[\n"
             "  significanceLevel = %f,\n"
             "  sampleCount= %i\n"
             "]",
             m_significanceLevel,
-            m_sampleCount
-        );
+            m_sampleCount);
     }
 
     EClassType getClassType() const { return ETest; }
+
 private:
     std::vector<BSDF *> m_bsdfs;
     std::vector<Scene *> m_scenes;

@@ -32,7 +32,8 @@ NORI_NAMESPACE_BEGIN
  * coordinating rendering jobs. It also provides useful query routines that
  * are mostly used by the \ref Integrator implementations.
  */
-class Scene : public NoriObject {
+class Scene : public NoriObject
+{
 public:
     /// Construct a new scene object
     Scene(const PropertyList &);
@@ -61,22 +62,22 @@ public:
     /// Return a reference to an array containing all meshes
     const std::vector<Mesh *> &getMeshes() const { return m_meshes; }
 
-	/// Return a reference to an array containing all lights
-	const std::vector<Emitter *> &getLights() const { return m_emitters; }
+    /// Return a reference to an array containing all lights
+    const std::vector<Emitter *> &getLights() const { return m_emitters; }
 
-	/// Return a the scene background
-	Color3f getBackground(const Ray3f& ray) const;
+    /// Return a the scene background
+    Color3f getBackground(const Ray3f &ray) const;
 
-	/// Sample emitter
-	const Emitter *sampleEmitter(float rnd, float &pdf) const;
+    /// Sample emitter
+    const Emitter *sampleEmitter(float rnd, float &pdf) const;
 
     float pdfEmitter(const Emitter *em) const;
 
-	/// Get enviromental emmiter
-	const Emitter *getEnvironmentalEmitter() const
-	{
-		return m_enviromentalEmitter;
-	}
+    /// Get enviromental emmiter
+    const Emitter *getEnvironmentalEmitter() const
+    {
+        return m_enviromentalEmitter;
+    }
 
     /**
      * \brief Intersect a ray against all triangles stored in the scene
@@ -92,7 +93,8 @@ public:
      *
      * \return \c true if an intersection was found
      */
-    bool rayIntersect(const Ray3f &ray, Intersection &its) const {
+    bool rayIntersect(const Ray3f &ray, Intersection &its) const
+    {
         return m_accel->rayIntersect(ray, its, false);
     }
 
@@ -111,13 +113,15 @@ public:
      *
      * \return \c true if an intersection was found
      */
-    bool rayIntersect(const Ray3f &ray) const {
+    bool rayIntersect(const Ray3f &ray) const
+    {
         Intersection its; /* Unused */
         return m_accel->rayIntersect(ray, its, true);
     }
 
     /// \brief Return an axis-aligned box that bounds the scene
-    const BoundingBox3f &getBoundingBox() const {
+    const BoundingBox3f &getBoundingBox() const
+    {
         return m_accel->getBoundingBox();
     }
 
@@ -130,17 +134,18 @@ public:
     void activate();
 
     /// Add a child object to the scene (meshes, integrators etc.)
-    void addChild(NoriObject *obj, const std::string& name = "none");
+    void addChild(NoriObject *obj, const std::string &name = "none");
 
     /// Return a string summary of the scene (for debugging purposes)
     std::string toString() const;
 
     EClassType getClassType() const { return EScene; }
+
 private:
     std::vector<Mesh *> m_meshes;
-	std::vector<Emitter *> m_emitters;
-	Emitter *m_enviromentalEmitter = nullptr;
-	
+    std::vector<Emitter *> m_emitters;
+    Emitter *m_enviromentalEmitter = nullptr;
+
     Integrator *m_integrator = nullptr;
     Sampler *m_sampler = nullptr;
     Camera *m_camera = nullptr;

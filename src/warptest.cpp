@@ -41,31 +41,32 @@
  * ======================================================================= */
 
 #if defined(_MSC_VER)
-#  pragma warning (disable: 4305 4244)
+#pragma warning(disable : 4305 4244)
 #endif
 
 using namespace nanogui;
 using namespace std;
 
+using nori::BSDF;
+using nori::BSDFQueryRecord;
+using nori::Color3f;
 using nori::NoriException;
 using nori::NoriObjectFactory;
 using nori::Point2f;
 using nori::Point2i;
 using nori::Point3f;
-using nori::Warp;
 using nori::PropertyList;
-using nori::BSDF;
-using nori::BSDFQueryRecord;
-using nori::Color3f;
+using nori::Warp;
 
-
-enum PointType : int {
+enum PointType : int
+{
     Independent = 0,
     Grid,
     Stratified
 };
 
-enum WarpType : int {
+enum WarpType : int
+{
     Square = 0,
     Tent,
     Disk,
@@ -79,10 +80,10 @@ enum WarpType : int {
 };
 static const std::string kWarpTypeNames[WarpTypeCount] = {
     "square", "tent", "disk", "triangle", "uniform_sphere", "uniform_hemisphere",
-    "cosine_hemisphere", "beckmann", "microfacet_brdf"
-};
+    "cosine_hemisphere", "beckmann", "microfacet_brdf"};
 
-struct WarpTest {
+struct WarpTest
+{
     static const int kDefaultXres = 51;
     static const int kDefaultYres = 51;
 
@@ -99,59 +100,79 @@ struct WarpTest {
              BSDFQueryRecord bRec_ = BSDFQueryRecord(Vector3f()),
              int xres_ = kDefaultXres, int yres_ = kDefaultYres)
         : warpType(warpType_), parameterValue(parameterValue_), bsdf(bsdf_),
-          bRec(bRec_), xres(xres_), yres(yres_) {
+          bRec(bRec_), xres(xres_), yres(yres_)
+    {
 
         if (warpType != Square && warpType != Disk && warpType != Tent)
             xres *= 2;
         res = xres * yres;
     }
 
-    std::pair<bool, std::string> run() {
+    std::pair<bool, std::string> run()
+    {
         int sampleCount = 1000 * res;
         obsFrequencies.reset(new double[res]);
         expFrequencies.reset(new double[res]);
-        memset(obsFrequencies.get(), 0, res*sizeof(double));
-        memset(expFrequencies.get(), 0, res*sizeof(double));
+        memset(obsFrequencies.get(), 0, res * sizeof(double));
+        memset(expFrequencies.get(), 0, res * sizeof(double));
 
         MatrixXf points, values;
         generatePoints(sampleCount, Independent, points, values);
 
-        for (int i=0; i<sampleCount; ++i) {
+        for (int i = 0; i < sampleCount; ++i)
+        {
             if (values(0, i) == 0)
                 continue;
             Vector3f sample = points.col(i);
             float x, y;
 
-            if (warpType == Square || warpType == Triangle) {
+            if (warpType == Square || warpType == Triangle)
+            {
                 x = sample.x();
                 y = sample.y();
-            } else if (warpType == Disk || warpType == Tent) {
+            }
+            else if (warpType == Disk || warpType == Tent)
+            {
                 x = sample.x() * 0.5f + 0.5f;
                 y = sample.y() * 0.5f + 0.5f;
-            } else {
+            }
+            else
+            {
                 x = std::atan2(sample.y(), sample.x()) * INV_TWOPI;
                 if (x < 0)
                     x += 1;
                 y = sample.z() * 0.5f + 0.5f;
             }
 
-            int xbin = std::min(xres-1, std::max(0, (int) std::floor(x * xres)));
-            int ybin = std::min(yres-1, std::max(0, (int) std::floor(y * yres)));
+            int xbin = std::min(xres - 1, std::max(0, (int)std::floor(x * xres)));
+            int ybin = std::min(yres - 1, std::max(0, (int)std::floor(y * yres)));
             obsFrequencies[ybin * xres + xbin] += 1;
         }
 
-        auto integrand = [&](double y, double x) -> double {
-            if (warpType == Square) {
+        auto integrand = [&](double y, double x) -> double
+        {
+            if (warpType == Square)
+            {
                 return Warp::squareToUniformSquarePdf(Point2f(x, y));
-            } else if (warpType == Disk) {
-                x = x * 2 - 1; y = y * 2 - 1;
+            }
+            else if (warpType == Disk)
+            {
+                x = x * 2 - 1;
+                y = y * 2 - 1;
                 return Warp::squareToUniformDiskPdf(Point2f(x, y));
-            } else if (warpType == Triangle) {
+            }
+            else if (warpType == Triangle)
+            {
                 return Warp::squareToUniformTrianglePdf(Point2f(x, y));
-            } else if (warpType == Tent) {
-                x = x * 2 - 1; y = y * 2 - 1;
+            }
+            else if (warpType == Tent)
+            {
+                x = x * 2 - 1;
+                y = y * 2 - 1;
                 return Warp::squareToTentPdf(Point2f(x, y));
-            } else {
+            }
+            else
+            {
                 x *= 2 * M_PI;
                 y = y * 2 - 1;
 
@@ -159,9 +180,9 @@ struct WarpTest {
                 double sinPhi = std::sin(x),
                        cosPhi = std::cos(x);
 
-                Vector3f v((float) (sinTheta * cosPhi),
-                           (float) (sinTheta * sinPhi),
-                           (float) y);
+                Vector3f v((float)(sinTheta * cosPhi),
+                           (float)(sinTheta * sinPhi),
+                           (float)y);
 
                 if (warpType == UniformSphere)
                     return Warp::squareToUniformSpherePdf(v);
@@ -171,12 +192,15 @@ struct WarpTest {
                     return Warp::squareToCosineHemispherePdf(v);
                 else if (warpType == Beckmann)
                     return Warp::squareToBeckmannPdf(v, parameterValue);
-                else if (warpType == MicrofacetBRDF) {
+                else if (warpType == MicrofacetBRDF)
+                {
                     BSDFQueryRecord br(bRec);
                     br.wo = v;
                     br.measure = nori::ESolidAngle;
                     return bsdf->pdf(br);
-                } else {
+                }
+                else
+                {
                     throw NoriException("Invalid warp type");
                 }
             }
@@ -188,17 +212,20 @@ struct WarpTest {
         else if (warpType == Disk || warpType == Tent)
             scale *= 4;
         else
-            scale *= 4*M_PI;
+            scale *= 4 * M_PI;
 
         double *ptr = expFrequencies.get();
-        for (int y=0; y<yres; ++y) {
-            double yStart =  y    / (double) yres;
-            double yEnd   = (y+1) / (double) yres;
-            for (int x=0; x<xres; ++x) {
-                double xStart =  x    / (double) xres;
-                double xEnd   = (x+1) / (double) xres;
+        for (int y = 0; y < yres; ++y)
+        {
+            double yStart = y / (double)yres;
+            double yEnd = (y + 1) / (double)yres;
+            for (int x = 0; x < xres; ++x)
+            {
+                double xStart = x / (double)xres;
+                double xEnd = (x + 1) / (double)xres;
                 ptr[y * xres + x] = hypothesis::adaptiveSimpson2D(
-                    integrand, yStart, xStart, yEnd, xEnd) * scale;
+                                        integrand, yStart, xStart, yEnd, xEnd) *
+                                    scale;
                 if (ptr[y * xres + x] < 0)
                     throw NoriException("The Pdf() function returned negative values!");
             }
@@ -211,77 +238,88 @@ struct WarpTest {
         const int minExpFrequency = 5;
         const float significanceLevel = 0.01f;
 
-        return hypothesis::chi2_test(yres*xres, obsFrequencies.get(),
+        return hypothesis::chi2_test(yres * xres, obsFrequencies.get(),
                                      expFrequencies.get(), sampleCount,
                                      minExpFrequency, significanceLevel, 1);
     }
 
-
-    std::pair<Point3f, float> warpPoint(const Point2f &sample) {
+    std::pair<Point3f, float> warpPoint(const Point2f &sample)
+    {
         Point3f result;
 
-        switch (warpType) {
-            case Square:
-                result << Warp::squareToUniformSquare(sample), 0; break;
-            case Tent:
-                result << Warp::squareToTent(sample), 0; break;
-            case Disk:
-                result << Warp::squareToUniformDisk(sample), 0; break;
-            case Triangle:
-                result << Warp::squareToUniformTriangle(sample), 0; break;
-            case UniformSphere:
-                result << Warp::squareToUniformSphere(sample); break;
-            case UniformHemisphere:
-                result << Warp::squareToUniformHemisphere(sample); break;
-            case CosineHemisphere:
-                result << Warp::squareToCosineHemisphere(sample); break;
-            case Beckmann:
-                result << Warp::squareToBeckmann(sample, parameterValue); break;
-            case MicrofacetBRDF: {
-                BSDFQueryRecord br(bRec);
-                float value = bsdf->sample(br, sample).getLuminance();
-                return std::make_pair(
-                    br.wo,
-                    value == 0 ? 0.f : bsdf->eval(br)[0]
-                );
-             }
-             default:
-                throw std::runtime_error("Unsupported warp type.");
+        switch (warpType)
+        {
+        case Square:
+            result << Warp::squareToUniformSquare(sample), 0;
+            break;
+        case Tent:
+            result << Warp::squareToTent(sample), 0;
+            break;
+        case Disk:
+            result << Warp::squareToUniformDisk(sample), 0;
+            break;
+        case Triangle:
+            result << Warp::squareToUniformTriangle(sample), 0;
+            break;
+        case UniformSphere:
+            result << Warp::squareToUniformSphere(sample);
+            break;
+        case UniformHemisphere:
+            result << Warp::squareToUniformHemisphere(sample);
+            break;
+        case CosineHemisphere:
+            result << Warp::squareToCosineHemisphere(sample);
+            break;
+        case Beckmann:
+            result << Warp::squareToBeckmann(sample, parameterValue);
+            break;
+        case MicrofacetBRDF:
+        {
+            BSDFQueryRecord br(bRec);
+            float value = bsdf->sample(br, sample).getLuminance();
+            return std::make_pair(
+                br.wo,
+                value == 0 ? 0.f : bsdf->eval(br)[0]);
+        }
+        default:
+            throw std::runtime_error("Unsupported warp type.");
         }
 
         return std::make_pair(result, 1.f);
     }
 
-
     void generatePoints(int &pointCount, PointType pointType,
-                        MatrixXf &positions, MatrixXf &weights) {
+                        MatrixXf &positions, MatrixXf &weights)
+    {
         /* Determine the number of points that should be sampled */
-        int sqrtVal = (int) (std::sqrt((float) pointCount) + 0.5f);
+        int sqrtVal = (int)(std::sqrt((float)pointCount) + 0.5f);
         float invSqrtVal = 1.f / sqrtVal;
         if (pointType == Grid || pointType == Stratified)
-            pointCount = sqrtVal*sqrtVal;
+            pointCount = sqrtVal * sqrtVal;
 
         pcg32 rng;
         positions.resize(3, pointCount);
         weights.resize(1, pointCount);
 
-        for (int i=0; i<pointCount; ++i) {
+        for (int i = 0; i < pointCount; ++i)
+        {
             int y = i / sqrtVal, x = i % sqrtVal;
             Point2f sample;
 
-            switch (pointType) {
-                case Independent:
-                    sample = Point2f(rng.nextFloat(), rng.nextFloat());
-                    break;
+            switch (pointType)
+            {
+            case Independent:
+                sample = Point2f(rng.nextFloat(), rng.nextFloat());
+                break;
 
-                case Grid:
-                    sample = Point2f((x + 0.5f) * invSqrtVal, (y + 0.5f) * invSqrtVal);
-                    break;
+            case Grid:
+                sample = Point2f((x + 0.5f) * invSqrtVal, (y + 0.5f) * invSqrtVal);
+                break;
 
-                case Stratified:
-                    sample = Point2f((x + rng.nextFloat()) * invSqrtVal,
-                                     (y + rng.nextFloat()) * invSqrtVal);
-                    break;
+            case Stratified:
+                sample = Point2f((x + rng.nextFloat()) * invSqrtVal,
+                                 (y + rng.nextFloat()) * invSqrtVal);
+                break;
             }
 
             auto result = warpPoint(sample);
@@ -291,43 +329,48 @@ struct WarpTest {
     }
 
     static std::pair<BSDF *, BSDFQueryRecord>
-    create_microfacet_bsdf(float alpha, float kd, float bsdfAngle) {
+    create_microfacet_bsdf(float alpha, float kd, float bsdfAngle)
+    {
         PropertyList list;
         list.setFloat("alpha", alpha);
         list.setColor("kd", Color3f(kd));
-        auto * brdf = (BSDF *) NoriObjectFactory::createInstance("microfacet", list);
+        auto *brdf = (BSDF *)NoriObjectFactory::createInstance("microfacet", list);
 
         Vector3f wi(std::sin(bsdfAngle), 0.f,
                     std::max(std::cos(bsdfAngle), 1e-4f));
         wi = wi.normalized();
         BSDFQueryRecord bRec(wi);
-        return { brdf, bRec };
+        return {brdf, bRec};
     }
 };
 
-class WarpTestScreen : public Screen {
+class WarpTestScreen : public Screen
+{
 public:
-
-    WarpTestScreen(): Screen(Vector2i(800, 600), "warptest: Sampling and Warping"), m_bRec(Vector3f()) {
+    WarpTestScreen() : Screen(Vector2i(800, 600), "warptest: Sampling and Warping"), m_bRec(Vector3f())
+    {
         initializeGUI();
         m_drawHistogram = false;
     }
 
-    static float mapParameter(WarpType warpType, float parameterValue) {
+    static float mapParameter(WarpType warpType, float parameterValue)
+    {
         if (warpType == Beckmann || warpType == MicrofacetBRDF)
             parameterValue = std::exp(std::log(0.01f) * (1 - parameterValue) +
-                                      std::log(1.f)   *  parameterValue);
+                                      std::log(1.f) * parameterValue);
         return parameterValue;
     }
 
-    void refresh() {
-        PointType pointType = (PointType) m_pointTypeBox->selectedIndex();
-        WarpType warpType = (WarpType) m_warpTypeBox->selectedIndex();
+    void refresh()
+    {
+        PointType pointType = (PointType)m_pointTypeBox->selectedIndex();
+        WarpType warpType = (WarpType)m_warpTypeBox->selectedIndex();
         float parameterValue = mapParameter(warpType, m_parameterSlider->value());
         float parameter2Value = mapParameter(warpType, m_parameter2Slider->value());
-        m_pointCount = (int) std::pow(2.f, 15 * m_pointCountSlider->value() + 5);
+        m_pointCount = (int)std::pow(2.f, 15 * m_pointCountSlider->value() + 5);
 
-        if (warpType == MicrofacetBRDF) {
+        if (warpType == MicrofacetBRDF)
+        {
             BSDF *ptr;
             float bsdfAngle = M_PI * (m_angleSlider->value() - 0.5f);
             std::tie(ptr, m_bRec) = WarpTest::create_microfacet_bsdf(
@@ -337,10 +380,13 @@ public:
 
         /* Generate the point positions */
         MatrixXf positions, values;
-        try {
+        try
+        {
             WarpTest tester(warpType, parameterValue, m_brdf.get(), m_bRec);
             tester.generatePoints(m_pointCount, pointType, positions, values);
-        } catch (const NoriException &e) {
+        }
+        catch (const NoriException &e)
+        {
             m_warpTypeBox->setSelectedIndex(0);
             refresh();
             new MessageDialog(this, MessageDialog::Type::Warning, "Error", "An error occurred: " + std::string(e.what()));
@@ -348,30 +394,35 @@ public:
         }
 
         float value_scale = 0.f;
-        for (int i=0; i<m_pointCount; ++i)
+        for (int i = 0; i < m_pointCount; ++i)
             value_scale = std::max(value_scale, values(0, i));
-        value_scale = 1.f/value_scale;
+        value_scale = 1.f / value_scale;
 
         if (!m_brdfValueCheckBox->checked() || warpType != MicrofacetBRDF)
             value_scale = 0.f;
 
-        if (warpType != Square) {
-            for (int i=0; i<m_pointCount; ++i) {
-                if (values(0, i) == 0.0f) {
+        if (warpType != Square)
+        {
+            for (int i = 0; i < m_pointCount; ++i)
+            {
+                if (values(0, i) == 0.0f)
+                {
                     positions.col(i) = Vector3f::Constant(std::numeric_limits<float>::quiet_NaN());
                     continue;
                 }
                 positions.col(i) =
                     ((value_scale == 0 ? 1.0f : (value_scale * values(0, i))) *
-                     positions.col(i)) * 0.5f + Vector3f(0.5f, 0.5f, 0.0f);
+                     positions.col(i)) *
+                        0.5f +
+                    Vector3f(0.5f, 0.5f, 0.0f);
             }
         }
 
         /* Generate a color gradient */
         MatrixXf colors(3, m_pointCount);
         float colScale = 1.f / m_pointCount;
-        for (int i=0; i<m_pointCount; ++i)
-            colors.col(i) << i*colScale, 1-i*colScale, 0;
+        for (int i = 0; i < m_pointCount; ++i)
+            colors.col(i) << i * colScale, 1 - i * colScale, 0;
 
         /* Upload points to GPU */
         m_pointShader->bind();
@@ -379,28 +430,32 @@ public:
         m_pointShader->uploadAttrib("color", colors);
 
         /* Upload lines to GPU */
-        if (m_gridCheckBox->checked()) {
-            int gridRes = (int) (std::sqrt((float) m_pointCount) + 0.5f);
-            int fineGridRes = 16*gridRes, idx = 0;
-            m_lineCount = 4 * (gridRes+1) * (fineGridRes+1);
+        if (m_gridCheckBox->checked())
+        {
+            int gridRes = (int)(std::sqrt((float)m_pointCount) + 0.5f);
+            int fineGridRes = 16 * gridRes, idx = 0;
+            m_lineCount = 4 * (gridRes + 1) * (fineGridRes + 1);
             positions.resize(3, m_lineCount);
             float coarseScale = 1.f / gridRes, fineScale = 1.f / fineGridRes;
 
             WarpTest tester(warpType, parameterValue, m_brdf.get(), m_bRec);
-            for (int i=0; i<=gridRes; ++i) {
-                for (int j=0; j<=fineGridRes; ++j) {
+            for (int i = 0; i <= gridRes; ++i)
+            {
+                for (int j = 0; j <= fineGridRes; ++j)
+                {
                     auto pt = tester.warpPoint(Point2f(j * fineScale, i * coarseScale));
                     positions.col(idx++) = value_scale == 0.f ? pt.first : (pt.first * pt.second * value_scale);
-                    pt = tester.warpPoint(Point2f((j+1) * fineScale, i * coarseScale));
+                    pt = tester.warpPoint(Point2f((j + 1) * fineScale, i * coarseScale));
                     positions.col(idx++) = value_scale == 0.f ? pt.first : (pt.first * pt.second * value_scale);
-                    pt = tester.warpPoint(Point2f(i*coarseScale, j     * fineScale));
+                    pt = tester.warpPoint(Point2f(i * coarseScale, j * fineScale));
                     positions.col(idx++) = value_scale == 0.f ? pt.first : (pt.first * pt.second * value_scale);
-                    pt = tester.warpPoint(Point2f(i*coarseScale, (j+1) * fineScale));
+                    pt = tester.warpPoint(Point2f(i * coarseScale, (j + 1) * fineScale));
                     positions.col(idx++) = value_scale == 0.f ? pt.first : (pt.first * pt.second * value_scale);
                 }
             }
-            if (warpType != Square) {
-                for (int i=0; i<m_lineCount; ++i)
+            if (warpType != Square)
+            {
+                for (int i = 0; i < m_lineCount; ++i)
                     positions.col(i) = positions.col(i) * 0.5f + Vector3f(0.5f, 0.5f, 0.0f);
             }
             m_gridShader->bind();
@@ -409,11 +464,12 @@ public:
 
         int ctr = 0;
         positions.resize(3, 106);
-        for (int i=0; i<=50; ++i) {
+        for (int i = 0; i <= 50; ++i)
+        {
             float angle1 = i * 2 * M_PI / 50;
-            float angle2 = (i+1) * 2 * M_PI / 50;
-            positions.col(ctr++) << std::cos(angle1)*.5f + 0.5f, std::sin(angle1)*.5f + 0.5f, 0.f;
-            positions.col(ctr++) << std::cos(angle2)*.5f + 0.5f, std::sin(angle2)*.5f + 0.5f, 0.f;
+            float angle2 = (i + 1) * 2 * M_PI / 50;
+            positions.col(ctr++) << std::cos(angle1) * .5f + 0.5f, std::sin(angle1) * .5f + 0.5f, 0.f;
+            positions.col(ctr++) << std::cos(angle2) * .5f + 0.5f, std::sin(angle2) * .5f + 0.5f, 0.f;
         }
         positions.col(ctr++) << 0.5f, 0.5f, 0.f;
         positions.col(ctr++) << -m_bRec.wi.x() * 0.5f + 0.5f, -m_bRec.wi.y() * 0.5f + 0.5f, m_bRec.wi.z() * 0.5f;
@@ -424,20 +480,25 @@ public:
 
         /* Update user interface */
         std::string str;
-        if (m_pointCount > 1000000) {
+        if (m_pointCount > 1000000)
+        {
             m_pointCountBox->setUnits("M");
             str = tfm::format("%.2f", m_pointCount * 1e-6f);
-        } else if (m_pointCount > 1000) {
+        }
+        else if (m_pointCount > 1000)
+        {
             m_pointCountBox->setUnits("K");
             str = tfm::format("%.2f", m_pointCount * 1e-3f);
-        } else {
+        }
+        else
+        {
             m_pointCountBox->setUnits(" ");
             str = tfm::format("%i", m_pointCount);
         }
         m_pointCountBox->setValue(str);
         m_parameterBox->setValue(tfm::format("%.1g", parameterValue));
         m_parameter2Box->setValue(tfm::format("%.1g", parameter2Value));
-        m_angleBox->setValue(tfm::format("%.1f", m_angleSlider->value() * 180-90));
+        m_angleBox->setValue(tfm::format("%.1f", m_angleSlider->value() * 180 - 90));
         m_parameterSlider->setEnabled(warpType == Beckmann || warpType == MicrofacetBRDF);
         m_parameterBox->setEnabled(warpType == Beckmann || warpType == MicrofacetBRDF);
         m_parameter2Slider->setEnabled(warpType == MicrofacetBRDF);
@@ -445,10 +506,11 @@ public:
         m_angleBox->setEnabled(warpType == MicrofacetBRDF);
         m_angleSlider->setEnabled(warpType == MicrofacetBRDF);
         m_brdfValueCheckBox->setEnabled(warpType == MicrofacetBRDF);
-        m_pointCountSlider->setValue((std::log((float) m_pointCount) / std::log(2.f) - 5) / 15);
+        m_pointCountSlider->setValue((std::log((float)m_pointCount) / std::log(2.f) - 5) / 15);
     }
 
-    ~WarpTestScreen() {
+    ~WarpTestScreen()
+    {
         glDeleteTextures(2, &m_textures[0]);
         delete m_pointShader;
         delete m_gridShader;
@@ -456,58 +518,65 @@ public:
         delete m_histogramShader;
     }
 
-    void framebufferSizeChanged() {
+    void framebufferSizeChanged()
+    {
         m_arcball.setSize(mSize);
     }
 
     bool mouseMotionEvent(const Vector2i &p, const Vector2i &rel,
-                                  int button, int modifiers) {
+                          int button, int modifiers)
+    {
         if (!Screen::mouseMotionEvent(p, rel, button, modifiers))
             m_arcball.motion(p);
         return true;
     }
 
-    bool mouseButtonEvent(const Vector2i &p, int button, bool down, int modifiers) {
-        if (down && !m_window->visible()) {
+    bool mouseButtonEvent(const Vector2i &p, int button, bool down, int modifiers)
+    {
+        if (down && !m_window->visible())
+        {
             m_drawHistogram = false;
             m_window->setVisible(true);
             return true;
         }
-        if (!Screen::mouseButtonEvent(p, button, down, modifiers)) {
+        if (!Screen::mouseButtonEvent(p, button, down, modifiers))
+        {
             if (button == GLFW_MOUSE_BUTTON_1)
                 m_arcball.button(p, down);
         }
         return true;
     }
 
-    void drawContents() {
+    void drawContents()
+    {
         /* Set up a perspective camera matrix */
         Matrix4f view, proj, model;
         view = lookAt(Vector3f(0, 0, 2), Vector3f(0, 0, 0), Vector3f(0, 1, 0));
         const float viewAngle = 30, near_clip = 0.01, far_clip = 100;
         float fH = std::tan(viewAngle / 360.0f * M_PI) * near_clip;
-        float fW = fH * (float) mSize.x() / (float) mSize.y();
+        float fW = fH * (float)mSize.x() / (float)mSize.y();
         proj = frustum(-fW, fW, -fH, fH, near_clip, far_clip);
 
         model.setIdentity();
         model = translate(Vector3f(-0.5f, -0.5f, 0.0f)) * model;
         model = m_arcball.matrix() * model;
 
-        if (m_drawHistogram) {
+        if (m_drawHistogram)
+        {
             /* Render the histograms */
-            WarpType warpType = (WarpType) m_warpTypeBox->selectedIndex();
+            WarpType warpType = (WarpType)m_warpTypeBox->selectedIndex();
             const int spacer = 20;
-            const int histWidth = (width() - 3*spacer) / 2;
+            const int histWidth = (width() - 3 * spacer) / 2;
             const int histHeight = (warpType == Square || warpType == Disk || warpType == Triangle || warpType == Tent) ? histWidth : histWidth / 2;
             const int verticalOffset = (height() - histHeight) / 2;
 
             drawHistogram(Point2i(spacer, verticalOffset), Vector2i(histWidth, histHeight), m_textures[0]);
-            drawHistogram(Point2i(2*spacer + histWidth, verticalOffset), Vector2i(histWidth, histHeight), m_textures[1]);
+            drawHistogram(Point2i(2 * spacer + histWidth, verticalOffset), Vector2i(histWidth, histHeight), m_textures[1]);
 
             auto ctx = mNVGContext;
             nvgBeginFrame(ctx, mSize[0], mSize[1], mPixelRatio);
             nvgBeginPath(ctx);
-            nvgRect(ctx, spacer, verticalOffset + histHeight + spacer, width()-2*spacer, 70);
+            nvgRect(ctx, spacer, verticalOffset + histHeight + spacer, width() - 2 * spacer, 70);
             nvgFillColor(ctx, m_testResult.first ? Color(100, 255, 100, 100) : Color(255, 100, 100, 100));
             nvgFill(ctx);
             nvgFontSize(ctx, 24.0f);
@@ -532,10 +601,12 @@ public:
             nvgTextBoxBounds(ctx, 0, 0, width() - 2 * spacer,
                              m_testResult.second.c_str(), nullptr, bounds);
             nvgTextBox(
-                ctx, spacer, verticalOffset + histHeight + spacer + (70 - bounds[3])/2,
+                ctx, spacer, verticalOffset + histHeight + spacer + (70 - bounds[3]) / 2,
                 width() - 2 * spacer, m_testResult.second.c_str(), nullptr);
             nvgEndFrame(ctx);
-        } else {
+        }
+        else
+        {
             /* Render the point set */
             Matrix4f mvp = proj * view * model;
             m_pointShader->bind();
@@ -545,7 +616,8 @@ public:
             m_pointShader->drawArray(GL_POINTS, 0, m_pointCount);
 
             bool drawGrid = m_gridCheckBox->checked();
-            if (drawGrid) {
+            if (drawGrid)
+            {
                 m_gridShader->bind();
                 m_gridShader->setUniform("mvp", mvp);
                 glEnable(GL_BLEND);
@@ -553,7 +625,8 @@ public:
                 m_gridShader->drawArray(GL_LINES, 0, m_lineCount);
                 glDisable(GL_BLEND);
             }
-            if (m_warpTypeBox->selectedIndex() == MicrofacetBRDF) {
+            if (m_warpTypeBox->selectedIndex() == MicrofacetBRDF)
+            {
                 m_arrowShader->bind();
                 m_arrowShader->setUniform("mvp", mvp);
                 m_arrowShader->drawArray(GL_LINES, 0, 106);
@@ -561,8 +634,9 @@ public:
         }
     }
 
-    void drawHistogram(const Point2i &pos_, const Vector2i &size_, GLuint tex) {
-        Vector2f s = -(pos_.array().cast<float>() + Vector2f(0.25f, 0.25f).array())  / size_.array().cast<float>();
+    void drawHistogram(const Point2i &pos_, const Vector2i &size_, GLuint tex)
+    {
+        Vector2f s = -(pos_.array().cast<float>() + Vector2f(0.25f, 0.25f).array()) / size_.array().cast<float>();
         Vector2f e = size().array().cast<float>() / size_.array().cast<float>() + s.array();
         Matrix4f mvp = ortho(s.x(), e.x(), e.y(), s.y(), -1, 1);
 
@@ -575,30 +649,35 @@ public:
         m_histogramShader->drawIndexed(GL_TRIANGLES, 0, 2);
     }
 
-    void runTest() {
+    void runTest()
+    {
         // Prepare and run test, passing parameters from UI.
-        WarpType warpType = (WarpType) m_warpTypeBox->selectedIndex();
+        WarpType warpType = (WarpType)m_warpTypeBox->selectedIndex();
         float parameterValue = mapParameter(warpType, m_parameterSlider->value());
 
         WarpTest tester(warpType, parameterValue, m_brdf.get(), m_bRec);
         m_testResult = tester.run();
 
         float maxValue = 0, minValue = std::numeric_limits<float>::infinity();
-        for (int i=0; i<tester.res; ++i) {
+        for (int i = 0; i < tester.res; ++i)
+        {
             maxValue = std::max(maxValue,
-                                (float) std::max(tester.obsFrequencies[i], tester.expFrequencies[i]));
+                                (float)std::max(tester.obsFrequencies[i], tester.expFrequencies[i]));
             minValue = std::min(minValue,
-                                (float) std::min(tester.obsFrequencies[i], tester.expFrequencies[i]));
+                                (float)std::min(tester.obsFrequencies[i], tester.expFrequencies[i]));
         }
         minValue /= 2;
-        float texScale = 1/(maxValue - minValue);
+        float texScale = 1 / (maxValue - minValue);
 
         /* Upload histograms to GPU */
         std::unique_ptr<float[]> buffer(new float[tester.res]);
-        for (int k=0; k<2; ++k) {
-            for (int i=0; i<tester.res; ++i)
+        for (int k = 0; k < 2; ++k)
+        {
+            for (int i = 0; i < tester.res; ++i)
                 buffer[i] = ((k == 0 ? tester.obsFrequencies[i]
-                                     : tester.expFrequencies[i]) - minValue) * texScale;
+                                     : tester.expFrequencies[i]) -
+                             minValue) *
+                            texScale;
 
             glBindTexture(GL_TEXTURE_2D, m_textures[k]);
             glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, tester.xres, tester.yres,
@@ -611,7 +690,8 @@ public:
         m_window->setVisible(false);
     }
 
-    void initializeGUI() {
+    void initializeGUI()
+    {
         m_window = new Window(this, "Warp tester");
         m_window->setPosition(Vector2i(15, 15));
         m_window->setLayout(new GroupLayout());
@@ -625,36 +705,42 @@ public:
         /* Add a slider and set defaults */
         m_pointCountSlider = new Slider(panel);
         m_pointCountSlider->setFixedWidth(55);
-        m_pointCountSlider->setCallback([&](float) { refresh(); });
+        m_pointCountSlider->setCallback([&](float)
+                                        { refresh(); });
 
         /* Add a textbox and set defaults */
         m_pointCountBox = new TextBox(panel);
         m_pointCountBox->setFixedSize(Vector2i(80, 25));
 
-        m_pointTypeBox = new ComboBox(m_window, { "Independent", "Grid", "Stratified" });
-        m_pointTypeBox->setCallback([&](int) { refresh(); });
+        m_pointTypeBox = new ComboBox(m_window, {"Independent", "Grid", "Stratified"});
+        m_pointTypeBox->setCallback([&](int)
+                                    { refresh(); });
 
         new Label(m_window, "Warping method", "sans-bold");
-        m_warpTypeBox = new ComboBox(m_window, { "Square", "Tent", "Disk", "Triangle", "Sphere", "Hemisphere (unif.)",
-                "Hemisphere (cos)", "Beckmann distr.", "Microfacet BRDF" });
-        m_warpTypeBox->setCallback([&](int) { refresh(); });
+        m_warpTypeBox = new ComboBox(m_window, {"Square", "Tent", "Disk", "Triangle", "Sphere", "Hemisphere (unif.)",
+                                                "Hemisphere (cos)", "Beckmann distr.", "Microfacet BRDF"});
+        m_warpTypeBox->setCallback([&](int)
+                                   { refresh(); });
 
         panel = new Widget(m_window);
         panel->setLayout(new BoxLayout(Orientation::Horizontal, Alignment::Middle, 0, 20));
         m_parameterSlider = new Slider(panel);
         m_parameterSlider->setFixedWidth(55);
-        m_parameterSlider->setCallback([&](float) { refresh(); });
+        m_parameterSlider->setCallback([&](float)
+                                       { refresh(); });
         m_parameterBox = new TextBox(panel);
         m_parameterBox->setFixedSize(Vector2i(80, 25));
         panel = new Widget(m_window);
         panel->setLayout(new BoxLayout(Orientation::Horizontal, Alignment::Middle, 0, 20));
         m_parameter2Slider = new Slider(panel);
         m_parameter2Slider->setFixedWidth(55);
-        m_parameter2Slider->setCallback([&](float) { refresh(); });
+        m_parameter2Slider->setCallback([&](float)
+                                        { refresh(); });
         m_parameter2Box = new TextBox(panel);
         m_parameter2Box->setFixedSize(Vector2i(80, 25));
         m_gridCheckBox = new CheckBox(m_window, "Visualize warped grid");
-        m_gridCheckBox->setCallback([&](bool) { refresh(); });
+        m_gridCheckBox->setCallback([&](bool)
+                                    { refresh(); });
 
         new Label(m_window, "BSDF parameters", "sans-bold");
 
@@ -663,28 +749,30 @@ public:
 
         m_angleSlider = new Slider(panel);
         m_angleSlider->setFixedWidth(55);
-        m_angleSlider->setCallback([&](float) { refresh(); });
+        m_angleSlider->setCallback([&](float)
+                                   { refresh(); });
         m_angleBox = new TextBox(panel);
         m_angleBox->setFixedSize(Vector2i(80, 25));
         m_angleBox->setUnits(utf8(0x00B0).data());
 
         m_brdfValueCheckBox = new CheckBox(m_window, "Visualize BRDF values");
-        m_brdfValueCheckBox->setCallback([&](bool) { refresh(); });
+        m_brdfValueCheckBox->setCallback([&](bool)
+                                         { refresh(); });
 
         new Label(m_window,
-            std::string(utf8(0x03C7).data()) +
-            std::string(utf8(0x00B2).data()) + " hypothesis test",
-            "sans-bold");
+                  std::string(utf8(0x03C7).data()) +
+                      std::string(utf8(0x00B2).data()) + " hypothesis test",
+                  "sans-bold");
 
         Button *testBtn = new Button(m_window, "Run", ENTYPO_ICON_CHECK);
         testBtn->setBackgroundColor(Color(0, 255, 0, 25));
-        testBtn->setCallback([&]{
+        testBtn->setCallback([&]
+                             {
             try {
                 runTest();
             } catch (const NoriException &e) {
                 new MessageDialog(this, MessageDialog::Type::Warning, "Error", "An error occurred: " + std::string(e.what()));
-            }
-        });
+            } });
 
         performLayout(mNVGContext);
 
@@ -714,8 +802,7 @@ public:
             "    if (frag_color == vec3(0.0))\n"
             "        discard;\n"
             "    out_color = vec4(frag_color, 1.0);\n"
-            "}"
-        );
+            "}");
 
         m_gridShader = new GLShader();
         m_gridShader->init(
@@ -734,8 +821,7 @@ public:
             "out vec4 out_color;\n"
             "void main() {\n"
             "    out_color = vec4(vec3(1.0), 0.4);\n"
-            "}"
-        );
+            "}");
 
         m_arrowShader = new GLShader();
         m_arrowShader->init(
@@ -754,8 +840,7 @@ public:
             "out vec4 out_color;\n"
             "void main() {\n"
             "    out_color = vec4(vec3(1.0), 0.4);\n"
-            "}"
-        );
+            "}");
 
         m_histogramShader = new GLShader();
         m_histogramShader->init(
@@ -803,17 +888,14 @@ public:
             "void main() {\n"
             "    float value = texture(tex, uv).r;\n"
             "    out_color = vec4(colormap(value, 0.0, 1.0), 1.0);\n"
-            "}"
-        );
+            "}");
 
         /* Upload a single quad */
         MatrixXf positions(2, 4);
         MatrixXu indices(3, 2);
-        positions <<
-            0, 1, 1, 0,
+        positions << 0, 1, 1, 0,
             0, 0, 1, 1;
-        indices <<
-            0, 2,
+        indices << 0, 2,
             1, 3,
             2, 0;
         m_histogramShader->bind();
@@ -827,7 +909,7 @@ public:
         drawAll();
 
         /* Set default and register slider callback */
-        m_pointCountSlider->setValue(7.f/15.f);
+        m_pointCountSlider->setValue(7.f / 15.f);
         m_parameterSlider->setValue(.5f);
         m_parameter2Slider->setValue(0.f);
         m_angleSlider->setValue(.5f);
@@ -836,6 +918,7 @@ public:
         setVisible(true);
         framebufferSizeChanged();
     }
+
 private:
     GLShader *m_pointShader = nullptr;
     GLShader *m_gridShader = nullptr;
@@ -857,10 +940,11 @@ private:
     std::pair<bool, std::string> m_testResult;
 };
 
-
-std::tuple<WarpType, float, float> parse_arguments(int argc, char **argv) {
+std::tuple<WarpType, float, float> parse_arguments(int argc, char **argv)
+{
     WarpType tp = WarpTypeCount;
-    for (int i = 0; i < WarpTypeCount; ++i) {
+    for (int i = 0; i < WarpTypeCount; ++i)
+    {
         if (strcmp(kWarpTypeNames[i].c_str(), argv[1]) == 0)
             tp = WarpType(i);
     }
@@ -873,12 +957,13 @@ std::tuple<WarpType, float, float> parse_arguments(int argc, char **argv) {
     if (argc > 3)
         value2 = std::stof(argv[3]);
 
-    return { tp, value, value2 };
+    return {tp, value, value2};
 }
 
-
-int main(int argc, char **argv) {
-    if (argc <= 1) {
+int main(int argc, char **argv)
+{
+    if (argc <= 1)
+    {
         // GUI mode
         nanogui::init();
         WarpTestScreen *screen = new WarpTestScreen();
@@ -894,7 +979,8 @@ int main(int argc, char **argv) {
     std::unique_ptr<BSDF> bsdf;
     auto bRec = BSDFQueryRecord(Vector3f());
     std::tie(warpType, paramValue, param2Value) = parse_arguments(argc, argv);
-    if (warpType == MicrofacetBRDF) {
+    if (warpType == MicrofacetBRDF)
+    {
         float bsdfAngle = M_PI * 0.f;
         BSDF *ptr;
         std::tie(ptr, bRec) = WarpTest::create_microfacet_bsdf(
@@ -906,9 +992,9 @@ int main(int argc, char **argv) {
     if (param2Value > 0)
         extra = tfm::format(", second parameter value = %f", param2Value);
     std::cout << tfm::format(
-        "Testing warp %s, parameter value = %f%s",
-         kWarpTypeNames[int(warpType)], paramValue, extra
-    ) << std::endl;
+                     "Testing warp %s, parameter value = %f%s",
+                     kWarpTypeNames[int(warpType)], paramValue, extra)
+              << std::endl;
     WarpTest tester(warpType, paramValue, bsdf.get(), bRec);
     auto res = tester.run();
     if (res.first)

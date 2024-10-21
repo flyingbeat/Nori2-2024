@@ -25,7 +25,8 @@ NORI_NAMESPACE_BEGIN
 /**
  * \brief Superclass of all textures to be used in Nori
  */
-class Texture : public NoriObject {
+class Texture : public NoriObject
+{
 
 public:
     /**
@@ -36,34 +37,34 @@ public:
      * \return
      *     The color of the texture
      */
-    virtual Color3f eval(const Point2f& uv) const = 0;
+    virtual Color3f eval(const Point2f &uv) const = 0;
 
     /**
      * \brief Return the type of object (i.e. Mesh/BSDF/etc.)
-    * provided by this instance
-    * */
+     * provided by this instance
+     * */
     EClassType getClassType() const { return ETexture; }
-
 };
 
-
-class ConstantSpectrumTexture : public Texture {
+class ConstantSpectrumTexture : public Texture
+{
 public:
-    ConstantSpectrumTexture(const PropertyList& props)
+    ConstantSpectrumTexture(const PropertyList &props)
     {
         m_color = props.getColor("color", Color3f(0.5f));
     }
 
-    ConstantSpectrumTexture(const Color3f& color): m_color(color){  }
+    ConstantSpectrumTexture(const Color3f &color) : m_color(color) {}
 
-    Color3f eval(const Point2f& uv) const { return m_color; }
+    Color3f eval(const Point2f &uv) const { return m_color; }
 
-    virtual std::string toString() const {
+    virtual std::string toString() const
+    {
         return tfm::format("%s", m_color.toString());
     }
+
 private:
     Color3f m_color;
 };
-
 
 NORI_NAMESPACE_END

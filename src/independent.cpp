@@ -31,16 +31,19 @@ NORI_NAMESPACE_BEGIN
  * number generator. For more details on what sample generators do in
  * general, refer to the \ref Sampler class.
  */
-class Independent : public Sampler {
+class Independent : public Sampler
+{
 public:
-    Independent(const PropertyList &propList) {
-        m_sampleCount = (size_t) propList.getInteger("sampleCount", 1);
+    Independent(const PropertyList &propList)
+    {
+        m_sampleCount = (size_t)propList.getInteger("sampleCount", 1);
         m_seed = propList.getInteger("seed", 0);
     }
 
-    virtual ~Independent() { }
+    virtual ~Independent() {}
 
-    std::unique_ptr<Sampler> clone() const {
+    std::unique_ptr<Sampler> clone() const
+    {
         std::unique_ptr<Independent> cloned(new Independent());
         cloned->m_sampleCount = m_sampleCount;
         cloned->m_seed = m_seed;
@@ -48,28 +51,30 @@ public:
         return std::move(cloned);
     }
 
-    void prepare(const ImageBlock &block) {
+    void prepare(const ImageBlock &block)
+    {
         m_random.seed(
             block.getOffset().x() + m_seed,
-            block.getOffset().y() + m_seed
-        );
+            block.getOffset().y() + m_seed);
     }
 
     void generate() { /* No-op for this sampler */ }
-    void advance()  { /* No-op for this sampler */ }
+    void advance() { /* No-op for this sampler */ }
 
-    float next1D() {
+    float next1D()
+    {
         return m_random.nextFloat();
     }
-    
-    Point2f next2D() {
+
+    Point2f next2D()
+    {
         return Point2f(
             m_random.nextFloat(),
-            m_random.nextFloat()
-        );
+            m_random.nextFloat());
     }
 
-    std::string toString() const {
+    std::string toString() const
+    {
         return tfm::format(
             "Independent[\n"
             "  sampleCount=%i,\n"
@@ -78,8 +83,9 @@ public:
             m_sampleCount,
             m_seed);
     }
+
 protected:
-    Independent() :m_seed(0) { }
+    Independent() : m_seed(0) {}
 
 private:
     pcg32 m_random;

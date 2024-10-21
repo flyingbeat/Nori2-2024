@@ -22,9 +22,11 @@
 NORI_NAMESPACE_BEGIN
 
 /// Ideal dielectric BSDF
-class Dielectric : public BSDF {
+class Dielectric : public BSDF
+{
 public:
-    Dielectric(const PropertyList &propList) {
+    Dielectric(const PropertyList &propList)
+    {
         /* Interior IOR (default: BK7 borosilicate optical glass) */
         m_intIOR = propList.getFloat("intIOR", 1.5046f);
 
@@ -32,23 +34,26 @@ public:
         m_extIOR = propList.getFloat("extIOR", 1.000277f);
     }
 
-    Color3f eval(const BSDFQueryRecord &) const {
+    Color3f eval(const BSDFQueryRecord &) const
+    {
         /* Discrete BRDFs always evaluate to zero in Nori */
         return Color3f(0.0f);
     }
 
-    float pdf(const BSDFQueryRecord &) const {
+    float pdf(const BSDFQueryRecord &) const
+    {
         /* Discrete BRDFs always evaluate to zero in Nori */
         return 0.0f;
     }
 
-    Color3f sample(BSDFQueryRecord &bRec, const Point2f &sample) const {
-        
+    Color3f sample(BSDFQueryRecord &bRec, const Point2f &sample) const
+    {
+
         float cosThetaI = Frame::cosTheta(bRec.wi);
         float F = fresnel(cosThetaI, m_extIOR, m_intIOR);
 
         bRec.measure = EDiscrete;
-        
+
         if (sample[0] < F) // Reflect
         {
             bRec.eta = 1;
@@ -60,28 +65,29 @@ public:
             float etaI = m_extIOR, etaT = m_intIOR;
             /* Swap the indices of refraction if the interaction starts
             at the inside of the object */
-            if (cosThetaI < 0.0f) {
+            if (cosThetaI < 0.0f)
+            {
                 std::swap(etaI, etaT);
                 cosThetaI = -cosThetaI;
             }
 
             float eta = etaI / etaT;
-            
+
             /* Using Snell's law, calculate the squared sine of the
                angle between the normal and the transmitted ray */
             float sinThetaTSqr = eta * eta * (1 - cosThetaI * cosThetaI);
             float cosThetaT = std::sqrt(1.0f - sinThetaTSqr);
 
             bRec.wo = Vector3f(-bRec.wi[0] * eta, -bRec.wi[1] * eta, (bRec.wi[2] > 0) ? -cosThetaT : cosThetaT);
-               
+
             bRec.eta = eta;
 
             return Color3f(eta);
         }
-
     }
 
-    std::string toString() const {
+    std::string toString() const
+    {
         return tfm::format(
             "Dielectric[\n"
             "  intIOR = %f,\n"
@@ -89,6 +95,7 @@ public:
             "]",
             m_intIOR, m_extIOR);
     }
+
 private:
     float m_intIOR, m_extIOR;
 };

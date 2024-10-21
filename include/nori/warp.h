@@ -24,7 +24,8 @@
 NORI_NAMESPACE_BEGIN
 
 /// A collection of useful warping functions for importance sampling
-class Warp {
+class Warp
+{
 public:
     /// Dummy warping function: takes uniformly distributed points in a square and just returns them
     static Point2f squareToUniformSquare(const Point2f &sample);
@@ -45,11 +46,10 @@ public:
     static float squareToUniformDiskPdf(const Point2f &p);
 
     /// Uniformly sample a vector on a 2D isosceles right triangle with area 1/2 based on its barycentric
-    static Point2f squareToUniformTriangle(const Point2f& sample);
-    
-    /// Probability density of \ref squareToUniformTriangle()
-    static float squareToUniformTrianglePdf(const Point2f& p);
+    static Point2f squareToUniformTriangle(const Point2f &sample);
 
+    /// Probability density of \ref squareToUniformTriangle()
+    static float squareToUniformTrianglePdf(const Point2f &p);
 
     /// Uniformly sample a vector on the unit sphere with respect to solid angles
     static Vector3f squareToUniformSphere(const Point2f &sample);

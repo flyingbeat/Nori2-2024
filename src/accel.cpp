@@ -1,19 +1,19 @@
 /*
-    This file is part of Nori, a simple educational ray tracer
+	This file is part of Nori, a simple educational ray tracer
 
-    Copyright (c) 2015 by Wenzel Jakob
+	Copyright (c) 2015 by Wenzel Jakob
 
-    Nori is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License Version 3
-    as published by the Free Software Foundation.
+	Nori is free software; you can redistribute it and/or modify
+	it under the terms of the GNU General Public License Version 3
+	as published by the Free Software Foundation.
 
-    Nori is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-    GNU General Public License for more details.
+	Nori is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+	GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>.
+	You should have received a copy of the GNU General Public License
+	along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <nori/accel.h>
@@ -25,7 +25,8 @@
 NORI_NAMESPACE_BEGIN
 
 /* Bin data structure for counting triangles and computing their bounding box */
-struct Bins {
+struct Bins
+{
 	static const int BIN_COUNT = 16;
 	Bins() { memset(counts, 0, sizeof(n_UINT) * BIN_COUNT); }
 	n_UINT counts[BIN_COUNT];
@@ -42,7 +43,8 @@ struct Bins {
  * "Fast and Parallel Construction of SAH-based Bounding Volume Hierarchies"
  * by Ingo Wald (Proc. IEEE/EG Symposium on Interactive Ray Tracing, 2007)
  */
-class BVHBuildTask : public tbb::task {
+class BVHBuildTask : public tbb::task
+{
 private:
 	Accel &bvh;
 	n_UINT node_idx;
@@ -50,7 +52,8 @@ private:
 
 public:
 	/// Build-related parameters
-	enum {
+	enum
+	{
 		/// Switch to a serial build when less than 32 triangles are left
 		SERIAL_THRESHOLD = 32,
 
@@ -86,14 +89,16 @@ public:
 	 *    unsigned integers.
 	 */
 	BVHBuildTask(Accel &bvh, n_UINT node_idx, n_UINT *start, n_UINT *end, n_UINT *temp)
-		: bvh(bvh), node_idx(node_idx), start(start), end(end), temp(temp) { }
+		: bvh(bvh), node_idx(node_idx), start(start), end(end), temp(temp) {}
 
-	task *execute() {
+	task *execute()
+	{
 		n_UINT size = (n_UINT)(end - start);
 		Accel::BVHNode &node = bvh.m_nodes[node_idx];
 
 		/* Switch to a serial build when less than SERIAL_THRESHOLD triangles are left */
-		if (size < SERIAL_THRESHOLD) {
+		if (size < SERIAL_THRESHOLD)
+		{
 			execute_serially(bvh, node_idx, start, end, temp);
 			return nullptr;
 		}
@@ -101,42 +106,46 @@ public:
 		/* Always split along the largest axis */
 		int axis = node.bbox.getLargestAxis();
 		float min = node.bbox.min[axis], max = node.bbox.max[axis],
-			inv_bin_size = Bins::BIN_COUNT / (max - min);
+			  inv_bin_size = Bins::BIN_COUNT / (max - min);
 
 		/* Accumulate all triangles into bins */
 		Bins bins = tbb::parallel_reduce(
 			tbb::blocked_range<n_UINT>(0u, size, GRAIN_SIZE),
 			Bins(),
 			/* MAP: Bin a number of triangles and return the resulting 'Bins' data structure */
-			[&](const tbb::blocked_range<n_UINT> &range, Bins result) {
-			for (n_UINT i = range.begin(); i != range.end(); ++i) {
-				n_UINT f = start[i];
-				float centroid = bvh.getCentroid(f)[axis];
+			[&](const tbb::blocked_range<n_UINT> &range, Bins result)
+			{
+				for (n_UINT i = range.begin(); i != range.end(); ++i)
+				{
+					n_UINT f = start[i];
+					float centroid = bvh.getCentroid(f)[axis];
 
-				int index = std::min(std::max(
-					(int)((centroid - min) * inv_bin_size), 0),
-					(Bins::BIN_COUNT - 1));
+					int index = std::min(std::max(
+											 (int)((centroid - min) * inv_bin_size), 0),
+										 (Bins::BIN_COUNT - 1));
 
-				result.counts[index]++;
-				result.bbox[index].expandBy(bvh.getBoundingBox(f));
-			}
-			return result;
-		},
+					result.counts[index]++;
+					result.bbox[index].expandBy(bvh.getBoundingBox(f));
+				}
+				return result;
+			},
 			/* REDUCE: Combine two 'Bins' data structures */
-			[](const Bins &b1, const Bins &b2) {
-			Bins result;
-			for (int i = 0; i < Bins::BIN_COUNT; ++i) {
-				result.counts[i] = b1.counts[i] + b2.counts[i];
-				result.bbox[i] = BoundingBox3f::merge(b1.bbox[i], b2.bbox[i]);
-			}
-			return result;
-		}
-		);
+			[](const Bins &b1, const Bins &b2)
+			{
+				Bins result;
+				for (int i = 0; i < Bins::BIN_COUNT; ++i)
+				{
+					result.counts[i] = b1.counts[i] + b2.counts[i];
+					result.bbox[i] = BoundingBox3f::merge(b1.bbox[i], b2.bbox[i]);
+				}
+				return result;
+			});
 
 		/* Choose the best split plane based on the binned data */
 		BoundingBox3f bbox_left[Bins::BIN_COUNT];
 		bbox_left[0] = bins.bbox[0];
-		for (int i = 1; i < Bins::BIN_COUNT; ++i) {
+		for (int i = 1; i < Bins::BIN_COUNT; ++i)
+		{
 			bins.counts[i] += bins.counts[i - 1];
 			bbox_left[i] = BoundingBox3f::merge(bbox_left[i - 1], bins.bbox[i]);
 		}
@@ -146,12 +155,14 @@ public:
 		float best_cost = (float)INTERSECTION_COST * size;
 		float tri_factor = (float)INTERSECTION_COST / node.bbox.getSurfaceArea();
 
-		for (int i = Bins::BIN_COUNT - 2; i >= 0; --i) {
+		for (int i = Bins::BIN_COUNT - 2; i >= 0; --i)
+		{
 			n_UINT prims_left = bins.counts[i], prims_right = (n_UINT)(end - start) - bins.counts[i];
 			float sah_cost = 2.0f * TRAVERSAL_COST +
-				tri_factor * (prims_left * bbox_left[i].getSurfaceArea() +
-					prims_right * bbox_right.getSurfaceArea());
-			if (sah_cost < best_cost) {
+							 tri_factor * (prims_left * bbox_left[i].getSurfaceArea() +
+										   prims_right * bbox_right.getSurfaceArea());
+			if (sah_cost < best_cost)
+			{
 				best_cost = sah_cost;
 				best_index = i;
 				best_bbox_right = bbox_right;
@@ -159,7 +170,8 @@ public:
 			bbox_right = BoundingBox3f::merge(bbox_right, bins.bbox[i]);
 		}
 
-		if (best_index == -1) {
+		if (best_index == -1)
+		{
 			/* Could not find a good split plane -- retry with
 			   more careful serial code just to be sure.. */
 			execute_serially(bvh, node_idx, start, end, temp);
@@ -181,38 +193,40 @@ public:
 
 		tbb::parallel_for(
 			tbb::blocked_range<n_UINT>(0u, size, GRAIN_SIZE),
-			[&](const tbb::blocked_range<n_UINT> &range) {
-			n_UINT count_left = 0, count_right = 0;
-			for (n_UINT i = range.begin(); i != range.end(); ++i) {
-				n_UINT f = start[i];
-				float centroid = bvh.getCentroid(f)[axis];
-				int index = (int)((centroid - min) * inv_bin_size);
-				(index <= best_index ? count_left : count_right)++;
-			}
-			n_UINT idx_l = offset_left.fetch_add(count_left);
-			n_UINT idx_r = offset_right.fetch_add(count_right);
-			for (n_UINT i = range.begin(); i != range.end(); ++i) {
-				n_UINT f = start[i];
-				float centroid = bvh.getCentroid(f)[axis];
-				int index = (int)((centroid - min) * inv_bin_size);
-				if (index <= best_index)
-					temp[idx_l++] = f;
-				else
-					temp[idx_r++] = f;
-			}
-		}
-		);
+			[&](const tbb::blocked_range<n_UINT> &range)
+			{
+				n_UINT count_left = 0, count_right = 0;
+				for (n_UINT i = range.begin(); i != range.end(); ++i)
+				{
+					n_UINT f = start[i];
+					float centroid = bvh.getCentroid(f)[axis];
+					int index = (int)((centroid - min) * inv_bin_size);
+					(index <= best_index ? count_left : count_right)++;
+				}
+				n_UINT idx_l = offset_left.fetch_add(count_left);
+				n_UINT idx_r = offset_right.fetch_add(count_right);
+				for (n_UINT i = range.begin(); i != range.end(); ++i)
+				{
+					n_UINT f = start[i];
+					float centroid = bvh.getCentroid(f)[axis];
+					int index = (int)((centroid - min) * inv_bin_size);
+					if (index <= best_index)
+						temp[idx_l++] = f;
+					else
+						temp[idx_r++] = f;
+				}
+			});
 		memcpy(start, temp, size * sizeof(n_UINT));
 		assert(offset_left == left_count && offset_right == size);
 
 		/* Create an empty parent task */
-		tbb::task& c = *new (allocate_continuation()) tbb::empty_task;
+		tbb::task &c = *new (allocate_continuation()) tbb::empty_task;
 		c.set_ref_count(2);
 
 		/* Post right subtree to scheduler */
 		BVHBuildTask &b = *new (c.allocate_child())
-			BVHBuildTask(bvh, node_idx_right, start + left_count,
-				end, temp + left_count);
+							  BVHBuildTask(bvh, node_idx_right, start + left_count,
+										   end, temp + left_count);
 		spawn(b);
 
 		/* Directly start working on left subtree */
@@ -224,7 +238,8 @@ public:
 	}
 
 	/// Single-threaded build function
-	static void execute_serially(Accel &bvh, n_UINT node_idx, n_UINT *start, n_UINT *end, n_UINT *temp) {
+	static void execute_serially(Accel &bvh, n_UINT node_idx, n_UINT *start, n_UINT *end, n_UINT *temp)
+	{
 		Accel::BVHNode &node = bvh.m_nodes[node_idx];
 		n_UINT size = (n_UINT)(end - start);
 		float best_cost = (float)INTERSECTION_COST * size;
@@ -232,14 +247,15 @@ public:
 		float *left_areas = (float *)temp;
 
 		/* Try splitting along every axis */
-		for (int axis = 0; axis < 3; ++axis) {
+		for (int axis = 0; axis < 3; ++axis)
+		{
 			/* Sort all triangles based on their centroid positions projected on the axis */
-			std::sort(start, end, [&](n_UINT f1, n_UINT f2) {
-				return bvh.getCentroid(f1)[axis] < bvh.getCentroid(f2)[axis];
-			});
+			std::sort(start, end, [&](n_UINT f1, n_UINT f2)
+					  { return bvh.getCentroid(f1)[axis] < bvh.getCentroid(f2)[axis]; });
 
 			BoundingBox3f bbox;
-			for (n_UINT i = 0; i < size; ++i) {
+			for (n_UINT i = 0; i < size; ++i)
+			{
 				n_UINT f = *(start + i);
 				bbox.expandBy(bvh.getBoundingBox(f));
 				left_areas[i] = (float)bbox.getSurfaceArea();
@@ -251,7 +267,8 @@ public:
 
 			/* Choose the best split plane */
 			float tri_factor = INTERSECTION_COST / node.bbox.getSurfaceArea();
-			for (n_UINT i = size - 1; i >= 1; --i) {
+			for (n_UINT i = size - 1; i >= 1; --i)
+			{
 				n_UINT f = *(start + i);
 				bbox.expandBy(bvh.getBoundingBox(f));
 
@@ -261,10 +278,11 @@ public:
 				n_UINT prims_right = size - i;
 
 				float sah_cost = 2.0f * TRAVERSAL_COST +
-					tri_factor * (prims_left * left_area +
-						prims_right * right_area);
+								 tri_factor * (prims_left * left_area +
+											   prims_right * right_area);
 
-				if (sah_cost < best_cost) {
+				if (sah_cost < best_cost)
+				{
 					best_cost = sah_cost;
 					best_index = i;
 					best_axis = axis;
@@ -272,7 +290,8 @@ public:
 			}
 		}
 
-		if (best_index == -1) {
+		if (best_index == -1)
+		{
 			/* Splitting does not reduce the cost, make a leaf */
 			node.leaf.flag = 1;
 			node.leaf.start = (n_UINT)(start - bvh.m_indices.data());
@@ -280,9 +299,8 @@ public:
 			return;
 		}
 
-		std::sort(start, end, [&](n_UINT f1, n_UINT f2) {
-			return bvh.getCentroid(f1)[best_axis] < bvh.getCentroid(f2)[best_axis];
-		});
+		std::sort(start, end, [&](n_UINT f1, n_UINT f2)
+				  { return bvh.getCentroid(f1)[best_axis] < bvh.getCentroid(f2)[best_axis]; });
 
 		n_UINT left_count = (n_UINT)best_index;
 		n_UINT node_idx_left = node_idx + 1;
@@ -296,13 +314,15 @@ public:
 	}
 };
 
-void Accel::addMesh(Mesh *mesh) {
+void Accel::addMesh(Mesh *mesh)
+{
 	m_meshes.push_back(mesh);
 	m_meshOffset.push_back(m_meshOffset.back() + mesh->getTriangleCount());
 	m_bbox.expandBy(mesh->getBoundingBox());
 }
 
-void Accel::clear() {
+void Accel::clear()
+{
 	for (auto mesh : m_meshes)
 		delete mesh;
 	m_meshes.clear();
@@ -317,13 +337,14 @@ void Accel::clear() {
 	m_indices.shrink_to_fit();
 }
 
-void Accel::build() {
+void Accel::build()
+{
 	n_UINT size = getTriangleCount();
 	if (size == 0)
 		return;
 	cout << "Constructing a SAH BVH (" << m_meshes.size()
-		<< (m_meshes.size() == 1 ? " mesh, " : " meshes, ")
-		<< size << " triangles) .. ";
+		 << (m_meshes.size() == 1 ? " mesh, " : " meshes, ")
+		 << size << " triangles) .. ";
 	cout.flush();
 	Timer timer;
 
@@ -342,8 +363,8 @@ void Accel::build() {
 		m_indices[i] = i;
 
 	n_UINT *indices = m_indices.data(), *temp = new n_UINT[size];
-	BVHBuildTask& task = *new(tbb::task::allocate_root())
-		BVHBuildTask(*this, 0u, indices, indices + size, temp);
+	BVHBuildTask &task = *new (tbb::task::allocate_root())
+							 BVHBuildTask(*this, 0u, indices, indices + size, temp);
 	tbb::task::spawn_root_and_wait(task);
 	delete[] temp;
 	std::pair<float, n_UINT> stats = statistics();
@@ -353,33 +374,37 @@ void Accel::build() {
 	std::vector<BVHNode> compactified(stats.second);
 	std::vector<n_UINT> skipped_accum(m_nodes.size());
 
-	for (int64_t i = stats.second - 1, j = m_nodes.size(), skipped = 0; i >= 0; --i) {
+	for (int64_t i = stats.second - 1, j = m_nodes.size(), skipped = 0; i >= 0; --i)
+	{
 		while (m_nodes[--j].isUnused())
 			skipped++;
 		BVHNode &new_node = compactified[i];
 		new_node = m_nodes[j];
 		skipped_accum[j] = (n_UINT)skipped;
 
-		if (new_node.isInner()) {
-			new_node.inner.rightChild = (n_UINT)
-				(i + new_node.inner.rightChild - j -
-				(skipped - skipped_accum[new_node.inner.rightChild]));
+		if (new_node.isInner())
+		{
+			new_node.inner.rightChild = (n_UINT)(i + new_node.inner.rightChild - j -
+												 (skipped - skipped_accum[new_node.inner.rightChild]));
 		}
 	}
 	cout << "done (took " << timer.elapsedString() << " and "
-		<< memString(sizeof(BVHNode) * m_nodes.size() + sizeof(n_UINT)*m_indices.size())
-		<< ", SAH cost = " << stats.first
-		<< ")." << endl;
+		 << memString(sizeof(BVHNode) * m_nodes.size() + sizeof(n_UINT) * m_indices.size())
+		 << ", SAH cost = " << stats.first
+		 << ")." << endl;
 
 	m_nodes = std::move(compactified);
 }
 
-std::pair<float, n_UINT> Accel::statistics(n_UINT node_idx) const {
+std::pair<float, n_UINT> Accel::statistics(n_UINT node_idx) const
+{
 	const BVHNode &node = m_nodes[node_idx];
-	if (node.isLeaf()) {
+	if (node.isLeaf())
+	{
 		return std::make_pair((float)BVHBuildTask::INTERSECTION_COST * node.leaf.size, 1u);
 	}
-	else {
+	else
+	{
 		std::pair<float, n_UINT> stats_left = statistics(node_idx + 1u);
 		std::pair<float, n_UINT> stats_right = statistics(node.inner.rightChild);
 		float saLeft = m_nodes[node_idx + 1u].bbox.getSurfaceArea();
@@ -390,12 +415,12 @@ std::pair<float, n_UINT> Accel::statistics(n_UINT node_idx) const {
 			(saLeft * stats_left.first + saRight * stats_right.first) / saCur;
 		return std::make_pair(
 			sahCost,
-			stats_left.second + stats_right.second + 1u
-		);
+			stats_left.second + stats_right.second + 1u);
 	}
 }
 
-bool Accel::rayIntersect(const Ray3f &_ray, Intersection &its, bool shadowRay) const {
+bool Accel::rayIntersect(const Ray3f &_ray, Intersection &its, bool shadowRay) const
+{
 	n_UINT node_idx = 0, stack_idx = 0, stack[64];
 
 	its.t = std::numeric_limits<float>::infinity();
@@ -411,28 +436,34 @@ bool Accel::rayIntersect(const Ray3f &_ray, Intersection &its, bool shadowRay) c
 	bool foundIntersection = false;
 	n_UINT f = 0;
 
-	while (true) {
+	while (true)
+	{
 		const BVHNode &node = m_nodes[node_idx];
 
-		if (!node.bbox.rayIntersect(ray)) {
+		if (!node.bbox.rayIntersect(ray))
+		{
 			if (stack_idx == 0)
 				break;
 			node_idx = stack[--stack_idx];
 			continue;
 		}
 
-		if (node.isInner()) {
+		if (node.isInner())
+		{
 			stack[stack_idx++] = node.inner.rightChild;
 			node_idx++;
 			assert(stack_idx < 64);
 		}
-		else {
-			for (n_UINT i = node.start(), end = node.end(); i < end; ++i) {
+		else
+		{
+			for (n_UINT i = node.start(), end = node.end(); i < end; ++i)
+			{
 				n_UINT idx = m_indices[i];
 				const Mesh *mesh = m_meshes[findMesh(idx)];
 
 				float u, v, t;
-				if (mesh->rayIntersect(idx, ray, u, v, t)) {
+				if (mesh->rayIntersect(idx, ray, u, v, t))
+				{
 					if (shadowRay)
 						return true;
 					foundIntersection = true;
@@ -449,7 +480,8 @@ bool Accel::rayIntersect(const Ray3f &_ray, Intersection &its, bool shadowRay) c
 		}
 	}
 
-	if (foundIntersection) {
+	if (foundIntersection)
+	{
 		/* Find the barycentric coordinates */
 		Vector3f bary;
 		bary << 1 - its.uv.sum(), its.uv;
@@ -473,13 +505,14 @@ bool Accel::rayIntersect(const Ray3f &_ray, Intersection &its, bool shadowRay) c
 		/* Compute proper texture coordinates if provided by the mesh */
 		if (UV.size() > 0)
 			its.uv = bary.x() * UV.col(idx0) +
-			bary.y() * UV.col(idx1) +
-			bary.z() * UV.col(idx2);
+					 bary.y() * UV.col(idx1) +
+					 bary.z() * UV.col(idx2);
 
 		/* Compute the geometry frame */
 		its.geoFrame = Frame((p1 - p0).cross(p2 - p0).normalized());
 
-		if (N.size() > 0) {
+		if (N.size() > 0)
+		{
 			/* Compute the shading frame. Note that for simplicity,
 			   the current implementation doesn't attempt to provide
 			   tangents that are continuous across the surface. That
@@ -488,10 +521,12 @@ bool Accel::rayIntersect(const Ray3f &_ray, Intersection &its, bool shadowRay) c
 
 			its.shFrame = Frame(
 				(bary.x() * N.col(idx0) +
-					bary.y() * N.col(idx1) +
-					bary.z() * N.col(idx2)).normalized());
+				 bary.y() * N.col(idx1) +
+				 bary.z() * N.col(idx2))
+					.normalized());
 		}
-		else {
+		else
+		{
 			its.shFrame = its.geoFrame;
 		}
 	}
@@ -500,4 +535,3 @@ bool Accel::rayIntersect(const Ray3f &_ray, Intersection &its, bool shadowRay) c
 }
 
 NORI_NAMESPACE_END
-

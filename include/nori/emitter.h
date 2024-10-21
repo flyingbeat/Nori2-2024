@@ -19,31 +19,29 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 #pragma once
 
 #include <nori/object.h>
 
 NORI_NAMESPACE_BEGIN
 
-
 enum class EmitterType
 {
-	EMITTER_POINT,
-	EMITTER_DISTANT_DISK,
-	EMITTER_AREA,
-	EMITTER_ENVIRONMENT,
-	EMITTER_UNKNOWN
+    EMITTER_POINT,
+    EMITTER_DISTANT_DISK,
+    EMITTER_AREA,
+    EMITTER_ENVIRONMENT,
+    EMITTER_UNKNOWN
 };
-
 
 /**
  * \brief Data record for conveniently querying and sampling the
  * direct illumination technique implemented by a emitter
  */
-struct EmitterQueryRecord {
+struct EmitterQueryRecord
+{
     /// Pointer to the sampled emitter
-    const Emitter* emitter;
+    const Emitter *emitter;
     /// Origin point from which we sample the emitter
     Point3f ref;
     /// Sampled position on the light source
@@ -60,34 +58,33 @@ struct EmitterQueryRecord {
     float dist;
 
     /// Create an unitialized query record
-    EmitterQueryRecord() : emitter(nullptr) { }
+    EmitterQueryRecord() : emitter(nullptr) {}
 
     /// Create a new query record that can be used to sample a emitter
-    EmitterQueryRecord(const Point3f& ref) : ref(ref) { }
+    EmitterQueryRecord(const Point3f &ref) : ref(ref) {}
 
     /**
      * \brief Create a query record that can be used to query the
      * sampling density after having intersected an area emitter
      */
-    EmitterQueryRecord(const Emitter* emitter,
-        const Point3f& ref, const Point3f& p,
-        const Normal3f& n, const Point2f& uv) : emitter(emitter), ref(ref), p(p), n(n), uv(uv){
-		wi = p - ref;
-		dist = wi.norm();
-		wi /= dist;
-	}
+    EmitterQueryRecord(const Emitter *emitter,
+                       const Point3f &ref, const Point3f &p,
+                       const Normal3f &n, const Point2f &uv) : emitter(emitter), ref(ref), p(p), n(n), uv(uv)
+    {
+        wi = p - ref;
+        dist = wi.norm();
+        wi /= dist;
+    }
 
-	/// Return a human-readable string summary
-	std::string toString() const;
+    /// Return a human-readable string summary
+    std::string toString() const;
 };
-
-
-
 
 /**
  * \brief Superclass of all emitters
  */
-class Emitter : public NoriObject {
+class Emitter : public NoriObject
+{
 public:
     /**
      * \brief Sample the emitter and return the importance weight (i.e. the
@@ -96,7 +93,7 @@ public:
      *
      * \param lRec    An emitter query record (only ref is needed)
      * \param sample  A uniformly distributed sample on \f$[0,1]^2\f$
-	 * \param u       Another optional sample that might be used in some scenarios.
+     * \param u       Another optional sample that might be used in some scenarios.
      *
      * \return The emitter value divided by the probability density of the sample.
      *         A zero value means that sampling failed.
@@ -133,7 +130,7 @@ public:
     virtual ~Emitter() {}
 
     /**
-     * \brief Return the type of object (i.e. Mesh/Emitter/etc.) 
+     * \brief Return the type of object (i.e. Mesh/Emitter/etc.)
      * provided by this instance
      * */
     virtual EClassType getClassType() const { return EEmitter; }
@@ -141,16 +138,16 @@ public:
     /**
      * \brief Set the mesh if the emitter is attached to a mesh
      * */
-    void setMesh(Mesh * mesh) { m_mesh = mesh; }
+    void setMesh(Mesh *mesh) { m_mesh = mesh; }
 
-	EmitterType getEmitterType() const { return m_type; }
+    EmitterType getEmitterType() const { return m_type; }
 
-	bool isDelta() const { return m_type == EmitterType::EMITTER_POINT; }
+    bool isDelta() const { return m_type == EmitterType::EMITTER_POINT; }
 
 protected:
     /// Pointer to the mesh if the emitter is attached to a mesh
-    Mesh * m_mesh = nullptr;
-	EmitterType m_type;
+    Mesh *m_mesh = nullptr;
+    EmitterType m_type;
 };
 
 NORI_NAMESPACE_END

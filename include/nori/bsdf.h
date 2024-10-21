@@ -19,7 +19,6 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 #pragma once
 
 #include <nori/object.h>
@@ -30,7 +29,8 @@ NORI_NAMESPACE_BEGIN
  * \brief Convenience data structure used to pass multiple
  * parameters to the evaluation and sampling routines in \ref BSDF
  */
-struct BSDFQueryRecord {
+struct BSDFQueryRecord
+{
     /// Incident direction (in the local frame)
     Vector3f wi;
 
@@ -47,19 +47,20 @@ struct BSDFQueryRecord {
     EMeasure measure;
 
     /// Create a new record for sampling the BSDF
-    BSDFQueryRecord(const Vector3f &wi, const Vector2f &uv = Vector2f() )
-        : wi(wi), eta(1.f), uv(uv), measure(EUnknownMeasure) { }
+    BSDFQueryRecord(const Vector3f &wi, const Vector2f &uv = Vector2f())
+        : wi(wi), eta(1.f), uv(uv), measure(EUnknownMeasure) {}
 
     /// Create a new record for querying the BSDF
     BSDFQueryRecord(const Vector3f &wi,
-            const Vector3f &wo, const Vector2f& uv, EMeasure measure)
-        : wi(wi), wo(wo), uv(uv), eta(1.f), measure(measure) { }
+                    const Vector3f &wo, const Vector2f &uv, EMeasure measure)
+        : wi(wi), wo(wo), uv(uv), eta(1.f), measure(measure) {}
 };
 
 /**
  * \brief Superclass of all bidirectional scattering distribution functions
  */
-class BSDF : public NoriObject {
+class BSDF : public NoriObject
+{
 public:
     /**
      * \brief Sample the BSDF and return the importance weight (i.e. the
