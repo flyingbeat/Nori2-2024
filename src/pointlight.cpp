@@ -47,7 +47,7 @@ public:
         return 1.;
     }
 
-    virtual Color3f power() const
+    virtual Color3f radiance() const
     {
         return m_radiance;
     }

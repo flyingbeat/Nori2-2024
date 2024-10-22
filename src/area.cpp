@@ -127,8 +127,8 @@ public:
 		}
 	}
 
-	// Get the total power of the emitter
-	virtual Color3f power() const
+	// Get the total radiance of the emitter
+	virtual Color3f radiance() const
 	{
 		if (!m_mesh)
 			throw NoriException("There is no shape attached to this Area light!");
