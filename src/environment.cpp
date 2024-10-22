@@ -15,6 +15,7 @@
 #include <nori/emitter.h>
 #include <nori/bitmap.h>
 #include <nori/warp.h>
+#include <nori/mesh.h>
 #include <filesystem/resolver.h>
 #include <fstream>
 
@@ -83,7 +84,20 @@ public:
 
 	virtual Color3f sample(EmitterQueryRecord &lRec, const Point2f &sample, float optional_u) const
 	{
-		throw NoriException("EnvironmentEmitter::sample() is not yet implemented!");
+		if (!m_environment)
+			throw NoriException("There is no envirnoment attached!");
+
+		// Sample a point on the sphere
+		Vector3f sphereSample = Warp::squareToUniformSphere(sample);
+
+		// fill the EmitterQueryRecord
+		lRec.dist = std::numeric_limits<float>::infinity();
+		lRec.wi = sphereSample.normalized();
+
+		lRec.pdf = this->pdf(lRec);
+
+		// Return the radiance
+		return eval(lRec);
 	}
 
 	// Returns probability with respect to solid angle given by all the information inside the emitterqueryrecord.
@@ -91,7 +105,7 @@ public:
 	// WARNING: Use with care. Malformed EmitterQueryRecords can result in undefined behavior. Plus no visibility is considered.
 	virtual float pdf(const EmitterQueryRecord &lRec) const
 	{
-		throw NoriException("EnvironmentEmitter::pdf() is not yet implemented!");
+		return Warp::squareToUniformSpherePdf(lRec.wi);
 	}
 
 	// Get the parent mesh
