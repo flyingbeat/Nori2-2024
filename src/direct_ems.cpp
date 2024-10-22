@@ -44,7 +44,8 @@ public:
         // and compute the intersection
         // V function in equation term
         Ray3f shadowRay(its.p, emitterRecord.wi);
-        if (scene->rayIntersect(shadowRay))
+        Intersection shadowIts;
+        if (scene->rayIntersect(shadowRay, shadowIts) && shadowIts.t <= emitterRecord.dist)
             return Lo;
 
         // Finally, we evaluate the BSDF. For that, we need to build

@@ -52,10 +52,16 @@ public:
 		if (!m_mesh)
 			throw NoriException("There is no shape attached to this Area light!");
 
-		// This function call can be done by bsdf sampling routines.
-		// Hence the ray was already traced for us - i.e a visibility test was already performed.
-		// Hence just check if the associated normal in emitter query record and incoming direction are not backfacing
-		throw NoriException("AreaEmitter::eval() is not yet implemented!");
+		// Check if the outgoing direction is above the emitting hemisphere of the triangle
+		if (lRec.n.dot(lRec.wi) < 0.0f)
+		{
+			// Return the radiance using the texture coordinates
+			return m_radiance->eval(lRec.uv) * M_PI;
+		}
+		else
+		{
+			return Color3f(0.0f);
+		}
 	}
 
 	virtual Color3f sample(EmitterQueryRecord &lRec, const Point2f &sample, float optional_u) const
@@ -63,7 +69,18 @@ public:
 		if (!m_mesh)
 			throw NoriException("There is no shape attached to this Area light!");
 
-		throw NoriException("AreaEmitter::sample() is not yet implemented!");
+		// Sample a point on the mesh
+		m_mesh->samplePosition(sample, lRec.p, lRec.n, lRec.uv);
+
+		// Compute the distance
+		lRec.dist = (lRec.p - lRec.ref).norm();
+
+		lRec.wi = (lRec.p - lRec.ref) / lRec.dist;
+
+		lRec.pdf = this->pdf(lRec);
+
+		// Return the radiance
+		return eval(lRec);
 	}
 
 	// Returns probability with respect to solid angle given by all the information inside the emitterqueryrecord.
@@ -75,7 +92,9 @@ public:
 		if (!m_mesh)
 			throw NoriException("There is no shape attached to this Area light!");
 
-		throw NoriException("AreaEmitter::pdf() is not yet implemented!");
+		// p_Ω(x, x_l) = p_S (x_l) * || x − x_l ||^2 / | n_l · ω_i |
+		float p_S = m_mesh->pdf(lRec.p);
+		return p_S * pow(lRec.dist, 2) / abs(lRec.n.dot(lRec.wi));
 	}
 
 	// Get the parent mesh
@@ -106,6 +125,15 @@ public:
 			throw NoriException("AreaEmitter::addChild(<%s>) is not supported!",
 								classTypeName(obj->getClassType()));
 		}
+	}
+
+	// Get the total power of the emitter
+	virtual Color3f power() const
+	{
+		if (!m_mesh)
+			throw NoriException("There is no shape attached to this Area light!");
+
+		return m_radiance->eval(Point2f(0, 0)) * (1. / m_mesh->pdf(Point3f(0, 0, 0)));
 	}
 
 protected:
