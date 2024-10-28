@@ -73,7 +73,8 @@ void Scene::activate()
     cout << endl;
 }
 
-/// Sample emitter
+// Sample emitter
+// REFERENCES: https://pbr-book.org/4ed/Light_Sources/Light_Sampling#PowerLightSampler
 const Emitter *Scene::sampleEmitter(float rnd, float &pdf) const
 {
     // NAIVE SAMPLING
@@ -86,6 +87,7 @@ const Emitter *Scene::sampleEmitter(float rnd, float &pdf) const
     return m_emitters[index];
 }
 
+// REFERENCES: https://pbr-book.org/4ed/Light_Sources/Light_Sampling#PowerLightSampler
 float Scene::pdfEmitter(const Emitter *em) const
 {
     // NAIVE SAMPLING
