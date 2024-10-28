@@ -47,6 +47,7 @@ public:
 	}
 
 	// We don't assume anything about the visibility of points specified in 'ref' and 'p' in the EmitterQueryRecord.
+	// REFERENCES: task description assignment, https://pbr-book.org/4ed/Light_Sources/Area_Lights
 	virtual Color3f eval(const EmitterQueryRecord &lRec) const
 	{
 		if (!m_mesh)
@@ -56,7 +57,7 @@ public:
 		if (lRec.n.dot(lRec.wi) < 0.0f)
 		{
 			// Return the radiance using the texture coordinates
-			return m_radiance->eval(lRec.uv) * M_PI;
+			return m_radiance->eval(lRec.uv) * M_PI * m_scale;
 		}
 		else
 		{
@@ -64,6 +65,7 @@ public:
 		}
 	}
 
+	// REFERENCES: task description assignment,  https://pbr-book.org/4ed/Light_Sources/Area_Lights
 	virtual Color3f sample(EmitterQueryRecord &lRec, const Point2f &sample, float optional_u) const
 	{
 		if (!m_mesh)
@@ -87,6 +89,7 @@ public:
 	// Assumes all information about the intersection point is already provided inside.
 	// WARNING: Use with care. Malformed EmitterQueryRecords can result in undefined behavior.
 	//			Plus no visibility is considered.
+	// REFERENCES: task description assignment,
 	virtual float pdf(const EmitterQueryRecord &lRec) const
 	{
 		if (!m_mesh)

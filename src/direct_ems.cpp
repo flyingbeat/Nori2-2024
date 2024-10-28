@@ -13,6 +13,9 @@ public:
     {
         /* No parameters this time */
     }
+    /*
+     * REFERENCES: Task description in assignment, direct whitted integrator
+     */
     Color3f Li(const Scene *scene, Sampler *sampler, const Ray3f &ray) const
     {
         Color3f Lo(0.);
@@ -41,7 +44,7 @@ public:
         // Here perform a visibility query, to check whether the light
         // source "em" is visible from the intersection point.
         // For that, we create a ray object (shadow ray),
-        // and compute the intersection
+        // and compute the intersection and check that the intersection is closer than the light source.
         // V function in equation term
         Ray3f shadowRay(its.p, emitterRecord.wi);
         Intersection shadowIts;

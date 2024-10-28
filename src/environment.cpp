@@ -82,6 +82,7 @@ public:
 		return m_environment->eval(Point2f(x, y)) * m_radiance;
 	}
 
+	// REFERENCES: https://pbr-book.org/4ed/Light_Sources/Infinite_Area_Lights
 	virtual Color3f sample(EmitterQueryRecord &lRec, const Point2f &sample, float optional_u) const
 	{
 		if (!m_environment)
@@ -103,6 +104,7 @@ public:
 	// Returns probability with respect to solid angle given by all the information inside the emitterqueryrecord.
 	// Assumes all information about the intersection point is already provided inside.
 	// WARNING: Use with care. Malformed EmitterQueryRecords can result in undefined behavior. Plus no visibility is considered.
+	//REFERENCES: https://pbr-book.org/4ed/Light_Sources/Infinite_Area_Lights
 	virtual float pdf(const EmitterQueryRecord &lRec) const
 	{
 		return Warp::squareToUniformSpherePdf(lRec.wi);

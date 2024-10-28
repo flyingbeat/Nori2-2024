@@ -42,16 +42,29 @@ float Warp::squareToTentPdf(const Point2f &p)
     throw NoriException("Warp::squareToTentPdf() is not yet implemented!");
 }
 
+// REFERENCES: https://pbr-book.org/4ed/Shapes/Disks#fragment-DiskPublicMethods-3
 Point2f Warp::squareToUniformDisk(const Point2f &sample)
 {
-    throw NoriException("Warp::squareToUniformDisk() is not yet implemented!");
+    float u = sample.x();
+    float v = sample.y();
+    float r = sqrt(u);
+    float theta = 2 * M_PI * v;
+
+    float x = r * cos(theta);
+    float y = r * sin(theta);
+
+    return Point2f(x, y);
 }
 
+// REFERENCES: https://pbr-book.org/4ed/Shapes/Disks#fragment-DiskPublicMethods-3
 float Warp::squareToUniformDiskPdf(const Point2f &p)
 {
-    throw NoriException("Warp::squareToUniformDiskPdf() is not yet implemented!");
+    float r = p.norm();
+    // area of unit disk = PI * 1^2 = PI
+    return r <= 1 ? 1 / M_PI : 0;
 }
 
+// REFERENCES: https://pbr-book.org/4ed/Shapes/Triangle_Meshes
 Point2f Warp::squareToUniformTriangle(const Point2f &sample)
 {
     float x = sample.x();
@@ -61,11 +74,13 @@ Point2f Warp::squareToUniformTriangle(const Point2f &sample)
     return Point2f(1.0f - x, 1.0f - y);
 }
 
+// REFERENCES: https://pbr-book.org/4ed/Shapes/Triangle_Meshes
 float Warp::squareToUniformTrianglePdf(const Point2f &p)
 {
     return (p.x() >= 0 && p.y() >= 0 && p.x() + p.y() <= 1) ? 2.0f : 0.0f;
 }
 
+// REFERENCES: https://pbr-book.org/4ed/Shapes/Spheres
 Vector3f Warp::squareToUniformSphere(const Point2f &sample)
 {
     float u = sample.x();
@@ -81,6 +96,7 @@ Vector3f Warp::squareToUniformSphere(const Point2f &sample)
     return Vector3f(x, y, z);
 }
 
+// REFERENCES: https://pbr-book.org/4ed/Shapes/Spheres
 float Warp::squareToUniformSpherePdf(const Vector3f &v)
 {
     return 1.0f / (4.0f * M_PI);
@@ -126,11 +142,14 @@ float Warp::squareToCosineHemispherePdf(const Vector3f &v)
     return (v.z() < 0.0f || v.z() > 1.0f) ? 0.0f : v.z() / M_PI;
 }
 
+// REFERENCES: https://www.pbr-book.org/3ed-2018/Reflection_Models/Microfacet_Models#MicrofacetDistributionFunctions
+// https://www.pbr-book.org/3ed-2018/Reflection_Models
 Vector3f Warp::squareToBeckmann(const Point2f &sample, float alpha)
 {
     throw NoriException("Warp::squareToBeckmann() is not yet implemented!");
 }
 
+// REFERENCES: https://www.pbr-book.org/3ed-2018/Reflection_Models/Microfacet_Models#MicrofacetDistributionFunctions
 float Warp::squareToBeckmannPdf(const Vector3f &m, float alpha)
 {
     throw NoriException("Warp::squareToBeckmannPdf() is not yet implemented!");

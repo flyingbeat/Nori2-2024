@@ -124,7 +124,7 @@ Point3f Mesh::getCentroid(n_UINT index) const
  * \brief Uniformly sample a position on the mesh with
  * respect to surface area. Returns both position and normal
  *
- * REFERENCE: https://www.pbr-book.org/4ed/Shapes/Triangle_Meshes#Sampling
+ * REFERENCES: https://www.pbr-book.org/4ed/Shapes/Triangle_Meshes#Sampling
  */
 void Mesh::samplePosition(const Point2f &sample, Point3f &p, Normal3f &n, Point2f &uv) const
 {
