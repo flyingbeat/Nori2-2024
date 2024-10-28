@@ -123,35 +123,36 @@ Point3f Mesh::getCentroid(n_UINT index) const
 /**
  * \brief Uniformly sample a position on the mesh with
  * respect to surface area. Returns both position and normal
+ *
+ * REFERENCE: https://www.pbr-book.org/4ed/Shapes/Triangle_Meshes#Sampling
  */
 void Mesh::samplePosition(const Point2f &sample, Point3f &p, Normal3f &n, Point2f &uv) const
 {
-    Point2f sample_c = sample;
+    Point2f u = sample;
+    size_t sample_index = m_pdf.sampleReuse(u.x());
 
-    auto sample_idx = m_pdf.sampleReuse(sample_c.x());
-
-    // barycentric coordinates of the triangle
-    Point2f bary = Warp::squareToUniformTriangle(sample_c);
-
-    float u = bary.x();
-    float v = bary.y();
-    float w = 1 - u - v;
-
-    auto indices = this->getIndices().col(sample_idx);
-
+    // get triangle vertices
+    auto indices = this->getIndices().col(sample_index);
     Point3f p0 = this->getVertexPositions().col(indices(0));
     Point3f p1 = this->getVertexPositions().col(indices(1));
     Point3f p2 = this->getVertexPositions().col(indices(2));
 
-    p = u * p0 + v * p1 + w * p2; // vertex
+    // sample point on triangle uniformly by area
+    Point2f b = Warp::squareToUniformTriangle(u);
 
-    // Get surface normal
+    float b0 = b.x();
+    float b1 = b.y();
+    float b2 = 1 - b0 - b1;
+
+    p = b0 * p0 + b1 * p1 + b2 * p2;
+
+    // get surface normals
     if (this->getVertexNormals().cols() > 0)
     {
         Point3f n0 = this->getVertexNormals().col(indices(0));
         Point3f n1 = this->getVertexNormals().col(indices(1));
         Point3f n2 = this->getVertexNormals().col(indices(2));
-        n = u * n0 + v * n1 + w * n2;
+        n = b0 * n0 + b1 * n1 + b2 * n2;
     }
     else
     {
@@ -159,12 +160,13 @@ void Mesh::samplePosition(const Point2f &sample, Point3f &p, Normal3f &n, Point2
         n.normalize();
     }
 
+    // get triangle texture coordinates
     if (this->getVertexTexCoords().cols() > 0)
     {
         Point2f uv0 = this->getVertexTexCoords().col(indices(0));
         Point2f uv1 = this->getVertexTexCoords().col(indices(1));
         Point2f uv2 = this->getVertexTexCoords().col(indices(2));
-        uv = u * uv0 + v * uv1 + w * uv2;
+        uv = b0 * uv0 + b1 * uv1 + b2 * uv2;
     }
 }
 
