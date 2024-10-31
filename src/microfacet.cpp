@@ -75,7 +75,11 @@ public:
         if (bRec.measure != ESolidAngle || Frame::cosTheta(bRec.wi) <= 0 || Frame::cosTheta(bRec.wo) <= 0)
             return 0.0f;
 
-        throw NoriException("RoughConductor::eval() is not yet implemented!");
+        // Roughness
+        float alpha = m_alpha->eval(bRec.uv).getLuminance();
+        Vector3f wh = (bRec.wi + bRec.wo).normalized();
+        
+        return Warp::squareToBeckmannPdf(wh, alpha) ;
     }
 
     /// Sample the BRDF
