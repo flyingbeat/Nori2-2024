@@ -106,13 +106,15 @@ add_definitions(${NANOGUI_EXTRA_DEFS})
 
 # The following lines build the warping test application
 add_executable(warptest
+  include/nori/reflectance.h
   include/nori/warp.h
+  src/common.cpp
+  src/object.cpp
+  src/microfacet.cpp
+  src/reflectance.cpp
+  src/proplist.cpp
   src/warp.cpp
   src/warptest.cpp
-  src/microfacet.cpp
-  src/object.cpp
-  src/proplist.cpp
-  src/common.cpp
 )
 
 if (WIN32)
