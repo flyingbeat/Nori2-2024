@@ -24,7 +24,9 @@
 #include <nori/frame.h>
 #include <nori/warp.h>
 #include <nori/reflectance.h>
+#include <nori/vector.h>
 #include <nori/texture.h>
+#include <nori/vector.h>
 
 NORI_NAMESPACE_BEGIN
 
@@ -44,6 +46,10 @@ public:
     }
 
     /// Evaluate the BRDF for the given pair of directions
+    // REFERENCES:
+    // - https://pbr-book.org/4ed/Reflection_Models/Roughness_Using_Microfacet_Theory
+    // - assignment task description
+    // - https://www.pbr-book.org/3ed-2018/Reflection_Models/Fresnel_Incidence_Effects#fragment-FresnelBlendPublicMethods-0
     Color3f eval(const BSDFQueryRecord &bRec) const
     {
         /* This is a smooth BRDF -- return zero if the measure
@@ -51,7 +57,14 @@ public:
         if (bRec.measure != ESolidAngle || Frame::cosTheta(bRec.wi) <= 0 || Frame::cosTheta(bRec.wo) <= 0)
             return Color3f(0.0f);
 
-        throw NoriException("RoughConductor::eval() is not yet implemented!");
+        Vector3f wh = (bRec.wi + bRec.wo).normalized();
+        Color3f F = Reflectance::fresnel(wh.dot(bRec.wi), m_R0->eval(bRec.uv));
+
+        float alpha = m_alpha->eval(bRec.uv).getLuminance();
+        float G = Reflectance::G1(bRec.wi, wh, alpha) * Reflectance::G1(bRec.wo, wh, alpha);
+
+        float D = Reflectance::BeckmannNDF(wh, alpha);
+        return D * F * G / (4.0f * Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo));
     }
 
     /// Evaluate the sampling density of \ref sample() wrt. solid angles
