@@ -23,10 +23,10 @@
 #include <nori/bsdf.h>
 #include <nori/frame.h>
 #include <nori/warp.h>
-#include <nori/reflectance.h>
 #include <nori/vector.h>
 #include <nori/texture.h>
 #include <nori/vector.h>
+#include <nori/reflectance.h>
 
 NORI_NAMESPACE_BEGIN
 
@@ -78,8 +78,8 @@ public:
         // Roughness
         float alpha = m_alpha->eval(bRec.uv).getLuminance();
         Vector3f wh = (bRec.wi + bRec.wo).normalized();
-        
-        return Warp::squareToBeckmannPdf(wh, alpha) ;
+
+        return Warp::squareToBeckmannPdf(wh, alpha);
     }
 
     /// Sample the BRDF
@@ -95,7 +95,12 @@ public:
 
         bRec.measure = ESolidAngle;
 
-        throw NoriException("RoughConductor::sample() is not yet implemented!");
+        float alpha = m_alpha->eval(bRec.uv).getLuminance();
+
+        Vector3f wh = Warp::squareToBeckmann(_sample, alpha);
+        bRec.wo = 2.0f * wh.dot(bRec.wi) * wh - bRec.wi;
+
+        return eval(bRec) * Frame::cosTheta(bRec.wi) / pdf(bRec);
     }
 
     bool isDiffuse() const
