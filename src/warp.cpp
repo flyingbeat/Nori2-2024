@@ -142,17 +142,35 @@ float Warp::squareToCosineHemispherePdf(const Vector3f &v)
     return (v.z() < 0.0f || v.z() > 1.0f) ? 0.0f : v.z() / M_PI;
 }
 
-// REFERENCES: https://www.pbr-book.org/3ed-2018/Reflection_Models/Microfacet_Models#MicrofacetDistributionFunctions
-// https://www.pbr-book.org/3ed-2018/Reflection_Models
+// REFERENCES: https://www.graphics.cornell.edu/~bjw/microfacetbsdf.pdf (28)
 Vector3f Warp::squareToBeckmann(const Point2f &sample, float alpha)
 {
-    throw NoriException("Warp::squareToBeckmann() is not yet implemented!");
+    float u = sample.x();
+    float v = sample.y();
+
+    float phi = 2.0f * M_PI * v;
+    float theta = atanf(sqrtf(-(pow(alpha, 2) * log(u))));
+    return Vector3f(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));
 }
 
-// REFERENCES: https://www.pbr-book.org/3ed-2018/Reflection_Models/Microfacet_Models#MicrofacetDistributionFunctions
+// REFERENCES:
+// https://www.pbr-book.org/3ed-2018/Reflection_Models/Microfacet_Models
+// https://www.pbr-book.org/3ed-2018/Reflection_Models/Microfacet_Models#eq:beckmann-d
 float Warp::squareToBeckmannPdf(const Vector3f &m, float alpha)
 {
-    throw NoriException("Warp::squareToBeckmannPdf() is not yet implemented!");
+    float cosTheta = Frame::cosTheta(m);
+    float sin2Theta = std::max(0.0f, 1.0f - powf(cosTheta, 2));
+    float tan2Theta = sin2Theta / powf(cosTheta, 2);
+    if (cosTheta <= 0 || std::isinf(tan2Theta))
+        return 0.;
+
+    float alpha2 = powf(alpha, 2);
+    float cos4Theta = powf(cosTheta, 4);
+
+    float D = expf(-tan2Theta * (powf(Frame::cosPhi(m), 2) / alpha2 +
+                                 powf(Frame::sinPhi(m), 2) / alpha2)) /
+              (M_PI * alpha2 * cos4Theta);
+    return D * cosTheta;
 }
 
 NORI_NAMESPACE_END
