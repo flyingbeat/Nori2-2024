@@ -23,9 +23,11 @@
 NORI_NAMESPACE_BEGIN
 
 /// Ideal dielectric BSDF
-class Dielectric : public BSDF {
+class Dielectric : public BSDF
+{
 public:
-    Dielectric(const PropertyList &propList) {
+    Dielectric(const PropertyList &propList)
+    {
         /* Interior IOR (default: BK7 borosilicate optical glass) */
         m_intIOR = propList.getFloat("intIOR", 1.5046f);
 
@@ -33,23 +35,26 @@ public:
         m_extIOR = propList.getFloat("extIOR", 1.000277f);
     }
 
-    Color3f eval(const BSDFQueryRecord &) const {
+    Color3f eval(const BSDFQueryRecord &) const
+    {
         /* Discrete BRDFs always evaluate to zero in Nori */
         return Color3f(0.0f);
     }
 
-    float pdf(const BSDFQueryRecord &) const {
+    float pdf(const BSDFQueryRecord &) const
+    {
         /* Discrete BRDFs always evaluate to zero in Nori */
         return 0.0f;
     }
 
-    Color3f sample(BSDFQueryRecord &bRec, const Point2f &sample) const {
-        
+    Color3f sample(BSDFQueryRecord &bRec, const Point2f &sample) const
+    {
+
         float cosThetaI = Frame::cosTheta(bRec.wi);
         float F = Reflectance::fresnel(cosThetaI, m_extIOR, m_intIOR);
 
         bRec.measure = EDiscrete;
-        
+
         if (sample[0] < F) // Reflect
         {
             bRec.eta = 1;
@@ -58,18 +63,18 @@ public:
         }
         else
         {
-            bRec.wo = Reflectance::refract(bRec.wi, Vector3f(0,0,1), m_extIOR, m_intIOR);
-            if (cosThetaI < 0.0f) 
+            bRec.wo = Reflectance::refract(bRec.wi, Vector3f(0, 0, 1), m_extIOR, m_intIOR);
+            if (cosThetaI < 0.0f)
                 bRec.eta = m_extIOR / m_intIOR;
             else
                 bRec.eta = m_intIOR / m_extIOR;
 
             return Color3f(bRec.eta);
         }
-
     }
 
-    std::string toString() const {
+    std::string toString() const
+    {
         return tfm::format(
             "Dielectric[\n"
             "  intIOR = %f,\n"
@@ -77,6 +82,7 @@ public:
             "]",
             m_intIOR, m_extIOR);
     }
+
 private:
     float m_intIOR, m_extIOR;
 };

@@ -35,21 +35,25 @@ using namespace nori;
 
 static int threadCount = -1;
 
-static void renderBlock(const Scene *scene, Sampler *sampler, ImageBlock &block) {
+static void renderBlock(const Scene *scene, Sampler *sampler, ImageBlock &block)
+{
     const Camera *camera = scene->getCamera();
     const Integrator *integrator = scene->getIntegrator();
 
     Point2i offset = block.getOffset();
-    Vector2i size  = block.getSize();
+    Vector2i size = block.getSize();
 
     /* Clear the block contents */
     block.clear();
 
     /* For each pixel and pixel sample sample */
-    for (int y=0; y<size.y(); ++y) {
-        for (int x=0; x<size.x(); ++x) {
-            for (uint32_t i=0; i<sampler->getSampleCount(); ++i) {
-                Point2f pixelSample = Point2f((float) (x + offset.x()), (float) (y + offset.y())) + sampler->next2D();
+    for (int y = 0; y < size.y(); ++y)
+    {
+        for (int x = 0; x < size.x(); ++x)
+        {
+            for (uint32_t i = 0; i < sampler->getSampleCount(); ++i)
+            {
+                Point2f pixelSample = Point2f((float)(x + offset.x()), (float)(y + offset.y())) + sampler->next2D();
                 Point2f apertureSample = sampler->next2D();
 
                 /* Sample a ray from the camera */
@@ -66,8 +70,9 @@ static void renderBlock(const Scene *scene, Sampler *sampler, ImageBlock &block)
     }
 }
 
-static void render(Scene* scene, const std::string& filename, bool nogui) {
-    const Camera* camera = scene->getCamera();
+static void render(Scene *scene, const std::string &filename, bool nogui)
+{
+    const Camera *camera = scene->getCamera();
     Vector2i outputSize = camera->getOutputSize();
     scene->getIntegrator()->preprocess(scene);
 
@@ -79,7 +84,7 @@ static void render(Scene* scene, const std::string& filename, bool nogui) {
     result.clear();
 
     /* Create a window that visualizes the partially rendered result */
-    NoriScreen* screen = 0;
+    NoriScreen *screen = 0;
     if (!nogui)
     {
         nanogui::init();
@@ -87,7 +92,8 @@ static void render(Scene* scene, const std::string& filename, bool nogui) {
     }
 
     /* Do the following in parallel and asynchronously */
-    std::thread render_thread([&] {
+    std::thread render_thread([&]
+                              {
         tbb::task_scheduler_init init(threadCount);
 
         cout << "Rendering .. ";
@@ -127,8 +133,7 @@ static void render(Scene* scene, const std::string& filename, bool nogui) {
         /// (equivalent to the following single-threaded call)
         // map(range);
 
-        cout << "done. (took " << timer.elapsedString() << ")" << endl;
-    });
+        cout << "done. (took " << timer.elapsedString() << ")" << endl; });
 
     if (!nogui)
     {
@@ -138,9 +143,9 @@ static void render(Scene* scene, const std::string& filename, bool nogui) {
         /* Shut down the user interface */
         render_thread.join();
 
-        if(screen)
+        if (screen)
             delete screen;
-    
+
         nanogui::shutdown();
     }
     else
@@ -163,8 +168,10 @@ static void render(Scene* scene, const std::string& filename, bool nogui) {
     bitmap->savePNG(outputName);
 }
 
-int main(int argc, char **argv) {
-    if (argc < 2) {
+int main(int argc, char **argv)
+{
+    if (argc < 2)
+    {
         cerr << "Syntax: " << argv[0] << " <scene.xml>" << endl;
         return -1;
     }
@@ -172,30 +179,36 @@ int main(int argc, char **argv) {
     bool nogui = false;
     std::string sceneName = "";
 
-    for (int i = 1; i < argc; ++i) {
+    for (int i = 1; i < argc; ++i)
+    {
         std::string token(argv[i]);
-        if (token == "-t" || token == "--threads") {
-            if (i+1 >= argc) {
+        if (token == "-t" || token == "--threads")
+        {
+            if (i + 1 >= argc)
+            {
                 cerr << "\"--threads\" argument expects a positive integer following it." << endl;
                 return -1;
             }
-            threadCount = atoi(argv[i+1]);
+            threadCount = atoi(argv[i + 1]);
             i++;
-            if (threadCount <= 0) {
+            if (threadCount <= 0)
+            {
                 cerr << "\"--threads\" argument expects a positive integer following it." << endl;
                 return -1;
             }
 
             continue;
         }
-        else if(token == "--nogui" || token == "-b")
+        else if (token == "--nogui" || token == "-b")
             nogui = true;
         else
         {
             filesystem::path path(argv[i]);
 
-            try {
-                if (path.extension() == "xml") {
+            try
+            {
+                if (path.extension() == "xml")
+                {
                     sceneName = argv[i];
 
                     /* Add the parent directory of the scene file to the
@@ -203,42 +216,49 @@ int main(int argc, char **argv) {
                        resources (OBJ files, textures) using relative paths */
                     getFileResolver()->prepend(path.parent_path());
                 }
-                else if (path.extension() == "exr") {
+                else if (path.extension() == "exr")
+                {
                     /* Alternatively, provide a basic OpenEXR image viewer */
                     Bitmap bitmap(argv[1]);
                     ImageBlock block(Vector2i((int)bitmap.cols(), (int)bitmap.rows()), nullptr);
                     block.fromBitmap(bitmap);
                     nanogui::init();
-                    NoriScreen* screen = new NoriScreen(block);
+                    NoriScreen *screen = new NoriScreen(block);
                     nanogui::mainloop();
                     delete screen;
                     nanogui::shutdown();
                 }
-                else {
+                else
+                {
                     cerr << "Fatal error: unknown file \"" << argv[1]
-                        << "\", expected an extension of type .xml or .exr" << endl;
+                         << "\", expected an extension of type .xml or .exr" << endl;
                 }
             }
-            catch (const std::exception& e) {
+            catch (const std::exception &e)
+            {
                 cerr << "Fatal error: " << e.what() << endl;
                 return -1;
             }
         }
     }
 
-    if (threadCount < 0) {
+    if (threadCount < 0)
+    {
         threadCount = tbb::task_scheduler_init::automatic;
     }
 
-    if (sceneName != "") {
-        try {
+    if (sceneName != "")
+    {
+        try
+        {
             std::unique_ptr<NoriObject> root(loadFromXML(argv[1]));
 
             /* When the XML root object is a scene, start rendering it .. */
             if (root->getClassType() == NoriObject::EScene)
-                render(static_cast<Scene*>(root.get()), argv[1], nogui);
+                render(static_cast<Scene *>(root.get()), argv[1], nogui);
         }
-        catch (const std::exception& e) {
+        catch (const std::exception &e)
+        {
             cerr << "[FATAL ERROR]: " << e.what() << endl;
             return -1;
         }

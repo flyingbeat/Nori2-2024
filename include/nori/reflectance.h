@@ -19,21 +19,22 @@
 
 NORI_NAMESPACE_BEGIN
 
-namespace Reflectance {
-	
+namespace Reflectance
+{
+
 	/**
 	 * \brief Computes the refracted vector following Sahl-Snell's law
 	 *
 	 * \param wi
-	 *      Incident vector 
+	 *      Incident vector
 	 * \param n
-	 *      Surface normal 
+	 *      Surface normal
 	 * \param extIOR
 	 *      Refractive index of the side that contains the surface normal
 	 * \param intIOR
 	 *      Refractive index of the interior
 	 */
-	extern Vector3f refract(const Vector3f& wi, const Vector3f& n, float extIOR, float intIOR);
+	extern Vector3f refract(const Vector3f &wi, const Vector3f &n, float extIOR, float intIOR);
 
 	/**
 	 * \brief Calculates the unpolarized fresnel reflection coefficient for a
@@ -60,7 +61,7 @@ namespace Reflectance {
 	 * \param intIOR
 	 *      Refractive index of the interior
 	 */
-	extern Color3f fresnel(float cosThetaI, const Color3f& R0);
+	extern Color3f fresnel(float cosThetaI, const Color3f &R0);
 
 	/**
 	 * \brief Calculates the Smith's geometry term
@@ -72,7 +73,7 @@ namespace Reflectance {
 	 * \param wh
 	 *      The half vector
 	 */
-	extern float G1(const Vector3f& wv, const Vector3f &wh, float alpha);
+	extern float G1(const Vector3f &wv, const Vector3f &wh, float alpha);
 
 	/**
 	 * \brief Calculates the Beckmann's NDF D(wh). Note that it is different
@@ -83,7 +84,7 @@ namespace Reflectance {
 	 * \param wh
 	 *      The half vector
 	 */
-	extern float BeckmannNDF(const Vector3f& wh, float alpha);
+	extern float BeckmannNDF(const Vector3f &wh, float alpha);
 
 };
 
