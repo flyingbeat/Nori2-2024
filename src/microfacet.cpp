@@ -276,6 +276,8 @@ public:
     }
 
     /// Evaluate the BRDF for the given pair of directions
+    // REFERENCES: https://pbr-book.org/3ed-2018/Reflection_Models/Fresnel_Incidence_Effects
+    // assignment report
     Color3f eval(const BSDFQueryRecord &bRec) const
     {
         /* This is a smooth BRDF -- return zero if the measure
@@ -283,7 +285,21 @@ public:
         if (bRec.measure != ESolidAngle || Frame::cosTheta(bRec.wi) <= 0 || Frame::cosTheta(bRec.wo) <= 0)
             return Color3f(0.0f);
 
-        throw NoriException("RoughSubstrate::eval() is not yet implemented!");
+        float alpha = m_alpha->eval(bRec.uv).getLuminance();
+        Vector3f wh = (bRec.wi + bRec.wo).normalized();
+        float D = Reflectance::BeckmannNDF(wh, alpha);
+        Color3f F = Reflectance::fresnel(wh.dot(bRec.wi), m_extIOR, m_intIOR);
+        float G = Reflectance::G1(bRec.wi, wh, alpha) * Reflectance::G1(bRec.wo, wh, alpha);
+
+        Color3f specular = D * F * G /
+                           (4.0f * Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo));
+
+        Color3f diffuse = 28.f * m_kd->eval(bRec.uv) / (23.f * M_PI) *
+                          (1 - powf((m_extIOR - m_intIOR) / (m_extIOR + m_intIOR), 2)) *
+                          (1 - powf(1 - 0.5f * Frame::cosTheta(bRec.wi), 5)) *
+                          (1 - powf(1 - 0.5f * Frame::cosTheta(bRec.wo), 5));
+
+        return diffuse + specular;
     }
 
     /// Evaluate the sampling density of \ref sample() wrt. solid angles
@@ -294,7 +310,13 @@ public:
         if (bRec.measure != ESolidAngle || Frame::cosTheta(bRec.wi) <= 0 || Frame::cosTheta(bRec.wo) <= 0)
             return 0.0f;
 
-        throw NoriException("RoughSubstrate::eval() is not yet implemented!");
+        // Roughness
+        float alpha = m_alpha->eval(bRec.uv).getLuminance();
+        Vector3f wh = (bRec.wi + bRec.wo).normalized();
+        float p_spec = Reflectance::fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
+
+        return p_spec * Warp::squareToBeckmannPdf(wh, alpha) +
+               (1 - p_spec) * Warp::squareToCosineHemispherePdf(bRec.wo);
     }
 
     /// Sample the BRDF
@@ -310,7 +332,30 @@ public:
 
         bRec.measure = ESolidAngle;
 
-        throw NoriException("RoughSubstrate::sample() is not yet implemented!");
+        float p_spec = Reflectance::fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
+
+        // float rr = rand() / (float)RAND_MAX;
+        if (_sample.x() < p_spec)
+        {
+            // Sample specular
+            float alpha = m_alpha->eval(bRec.uv).getLuminance();
+            Vector3f wh = Warp::squareToBeckmann(_sample, alpha);
+            bRec.wo = 2.0f * wh.dot(bRec.wi) * wh - bRec.wi;
+        }
+        else
+        {
+            // Sample diffuse
+            bRec.wo = Warp::squareToCosineHemisphere(_sample);
+            bRec.eta = 1.0f;
+        }
+
+        float pdf_ = pdf(bRec);
+        if (abs(pdf_) < Epsilon)
+        {
+            return Color3f(0.0f);
+        }
+
+        return eval(bRec) * Frame::cosTheta(bRec.wo) / pdf_;
     }
 
     bool isDiffuse() const
