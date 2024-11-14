@@ -100,7 +100,11 @@ public:
         Vector3f wh = Warp::squareToBeckmann(_sample, alpha);
         bRec.wo = 2.0f * wh.dot(bRec.wi) * wh - bRec.wi;
 
-        return eval(bRec) * Frame::cosTheta(bRec.wi) / pdf(bRec);
+        float _pdf = pdf(bRec);
+        if (_pdf < Epsilon)
+            return Color3f(0.0f);
+
+        return eval(bRec) * Frame::cosTheta(bRec.wi) / _pdf;
     }
 
     bool isDiffuse() const
