@@ -80,6 +80,7 @@ add_executable(nori
   src/diffuse.cpp
   src/direct_ems.cpp
   src/direct_mats.cpp
+  src/direct_mis.cpp
   src/direct_whitted.cpp
   src/environment.cpp  
   src/gui.cpp
