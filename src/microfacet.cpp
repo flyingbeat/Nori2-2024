@@ -338,8 +338,8 @@ public:
 
         float p_spec = Reflectance::fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
 
-        // float rr = rand() / (float)RAND_MAX;
-        if (_sample.x() < p_spec)
+        float russionRoulette = rand() / static_cast<float>(RAND_MAX);
+        if (russionRoulette < p_spec)
         {
             // Sample specular
             float alpha = m_alpha->eval(bRec.uv).getLuminance();
