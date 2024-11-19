@@ -57,7 +57,7 @@ public:
 		if (lRec.n.dot(lRec.wi) < 0.0f)
 		{
 			// Return the radiance using the texture coordinates
-			return m_radiance->eval(lRec.uv) * M_PI * m_scale;
+			return m_radiance->eval(lRec.uv) * m_scale;
 		}
 		else
 		{
