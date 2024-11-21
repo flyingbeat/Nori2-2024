@@ -33,7 +33,7 @@ public:
             emitterRecord.p = its.p;
             emitterRecord.wi = its.p - ray.o;
             emitterRecord.n = its.shFrame.n;
-            Lo += its.mesh->getEmitter()->eval(emitterRecord);
+            return its.mesh->getEmitter()->eval(emitterRecord);
         }
 
         // light sampling
@@ -69,11 +69,10 @@ public:
             BSDFQueryRecord bsdfRecord(its.toLocal(-ray.d),
                                        its.toLocal(emitterRecord.wi), its.uv, ESolidAngle);
 
-            Color3f frEms = its.mesh->getBSDF()->eval(bsdfRecord);
-
-            // calculating the cosin term
             float cosTheta = its.shFrame.n.dot(emitterRecord.wi);
-            float wem = p_emW_em / (p_emW_em + p_matW_mat);
+            float p_mat_Wem = bsdf->pdf(bsdfRecord);
+            Color3f frEms = its.mesh->getBSDF()->eval(bsdfRecord);
+            float wem = p_emW_em / (p_emW_em + p_mat_Wem);
 
             Lo += wem * ((LiEms * frEms * cosTheta) / p_emW_em);
         }
@@ -90,7 +89,7 @@ public:
             if (shadowItsMats.mesh->isEmitter())
             {
                 const Emitter *emitter = shadowItsMats.mesh->getEmitter();
-                EmitterQueryRecord emitterRecord(its.mesh->getEmitter(), sampledRay.o, shadowItsMats.p, shadowItsMats.shFrame.n, shadowItsMats.uv);
+                EmitterQueryRecord emitterRecord(emitter, sampledRay.o, shadowItsMats.p, shadowItsMats.shFrame.n, shadowItsMats.uv);
 
                 float p_emW_mat = emitter->pdf(emitterRecord);
 
