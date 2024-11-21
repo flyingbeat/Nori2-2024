@@ -93,6 +93,7 @@ add_executable(nori
   src/obj.cpp
   src/object.cpp
   src/path.cpp
+  src/path_nee.cpp
   src/parser.cpp
   src/perspective.cpp
   src/pointlight.cpp
