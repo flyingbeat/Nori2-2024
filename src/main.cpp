@@ -156,10 +156,13 @@ static void render(Scene *scene, const std::string &filename, bool nogui)
     std::unique_ptr<Bitmap> bitmap(result.toBitmap());
 
     /* Determine the filename of the output bitmap */
+    int sampleCount = scene->getSampler()->getSampleCount();
     std::string outputName = filename;
     size_t lastdot = outputName.find_last_of(".");
     if (lastdot != std::string::npos)
         outputName.erase(lastdot, std::string::npos);
+
+    outputName += "_" + std::to_string(sampleCount);
 
     /* Save using the OpenEXR format */
     bitmap->saveEXR(outputName);
