@@ -67,6 +67,7 @@ add_executable(nori
   include/nori/transform.h
   include/nori/vector.h
   include/nori/warp.h
+  include/nori/vpl.h
 
   # Source code files
   src/accel.cpp
@@ -104,6 +105,7 @@ add_executable(nori
   src/scene.cpp
   src/texture.cpp
   src/ttest.cpp
+  src/vpl.cpp
   src/warp.cpp
 )
 
