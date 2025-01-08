@@ -5,6 +5,7 @@
 #include <nori/vpl.h>
 #include <nori/sampler.h>
 #include <nori/warp.h>
+#include <iostream>
 
 NORI_NAMESPACE_BEGIN
 
@@ -13,43 +14,59 @@ class VPLIntegrator : public Integrator
 public:
     VPLIntegrator(const PropertyList &props)
     {
-        // no parameters this time
+        m_showVPLs = props.getBoolean("show_vpls", false);
         m_numVPLs = props.getInteger("num_vpls", 100);
     }
 
-    // void preprocess(const Scene *scene)
-    // {
-    //     cout << "Preprocessing VPLs..." << endl;
-    //     // Initialize the sampler
-    //     Sampler *sampler = const_cast<Sampler *>(scene->getSampler());
+    Color3f Li(const Scene *scene, Sampler *sampler, const Ray3f &ray) const
+    {
+        Color3f Lo(0.);
+        Intersection its;
+        if (!scene->rayIntersect(ray, its))
+            return scene->getBackground(ray);
 
-    //     // Iterate to generate the desired number of VPLs
-    //     for (int i = 0; i < m_numVPLs; ++i)
-    //     {
-    //         // Step 1: Sample a light source
-    //         float pdfEmitter;
-    //         // Get random light in the scene
-    //         const Emitter *em = scene->sampleEmitter(sampler->next1D(), pdfEmitter);
-    //         if (!em)
-    //             continue; // If no light is sampled, skip this iteration
+        if (its.mesh->isEmitter())
+        {
+            EmitterQueryRecord emitterRecord(ray.o);
+            emitterRecord.p = its.p;
+            emitterRecord.wi = its.p - ray.o;
+            emitterRecord.n = its.shFrame.n;
+            return its.mesh->getEmitter()->eval(emitterRecord);
+        }
 
-    //         // Sample a ray from the light source
-    //         EmitterQueryRecord emitterRec;
-    //         Color3f LiEms = em->sample(emitterRec, sampler->next2D(), 0.0f);
+        // Iterate over all VPLs to compute their contribution
+        for (const VPL &vpl : m_vpls)
+        {
+            // Compute the vector from the shading point to the VPL
+            Vector3f lightDir = (vpl.position - its.p).normalized();
+            float distanceSquared = (vpl.position - its.p).squaredNorm();
 
-    //         // Step 2: Trace the ray into the scene
-    //         Ray3f lightRay(emitterRec.p, emitterRec.wi);
-    //         Intersection its;
-    //         if (!scene->rayIntersect(lightRay, its))
-    //             continue; // If no intersection, skip this iteration
+            // Check visibility (shadow ray)
+            Ray3f shadowRay(its.p, lightDir);
+            Intersection shadowIts;
+            if (scene->rayIntersect(shadowRay, shadowIts) && shadowIts.t <= std::sqrt(distanceSquared))
+                continue; // Skip if the VPL is occluded
 
-    //         // Step 3: Create a VPL at the intersection point
-    //         VPL vpl(its.p, its.shFrame.n, LiEms);
+            // Highlight the VPLs in green
+            if (m_showVPLs && (vpl.position - its.p).norm() <= 0.01)
+            {
+                return Color3f(0, 1, 0);
+            }
+            // Compute the BRDF at the shading point
+            BSDFQueryRecord bsdfRec(its.toLocal(-ray.d), its.toLocal(lightDir), its.uv, ESolidAngle);
+            Color3f bsdfValue = its.mesh->getBSDF()->eval(bsdfRec);
 
-    //         // Add the VPL to the list
-    //         m_vpls.push_back(vpl);
-    //     }
-    // }
+            // Compute the geometric term
+            float cosTheta = std::max(0.0f, its.shFrame.n.dot(lightDir));
+            float vplCosTheta = std::max(0.0f, vpl.normal.dot(-lightDir));
+            float geometryTerm = (cosTheta * vplCosTheta) / distanceSquared;
+
+            //  Accumulate the VPL's contribution
+            Lo += (bsdfValue * vpl.flux * geometryTerm);
+        }
+
+        return Lo;
+    }
 
     void preprocess(const Scene *scene)
     {
@@ -66,56 +83,26 @@ public:
                 continue;
 
             // Sample a position on the emitter
-            EmitterQueryRecord eRec;
-            Color3f flux = emitter->sample(eRec, sampler->next2D(), 0.0f);
-            flux /= pdfEmitter; // Normalize by emitter PDF
-            if (flux.isZero())
-                continue;
+            EmitterQueryRecord pRec;
+            Color3f weight = emitter->sample(pRec, sampler->next2D(), 0.0f);
+
+            // Sample a direction from the emitter
+            EmitterQueryRecord dRec;
+            emitter->sampleDirection(pRec, dRec, sampler->next2D());
 
             // Add the initial VPL based on the emitter
-            VPL vpl(EEmitterVPL, eRec.p, eRec.n, flux);
+            Vector3f normal = (dRec.wi - pRec.p).normalized();
+            VPL vpl(EEmitterVPL, pRec.p, normal, weight);
             m_vpls.push_back(vpl);
 
             // Trace a random walk for indirect VPLs
-            generateIndirectVPLs(scene, sampler, vpl, m_vpls);
+            generateIndirectVPLs(scene, sampler, vpl, dRec, m_vpls);
         }
-    }
-
-    Color3f Li(const Scene *scene, Sampler *sampler, const Ray3f &ray) const
-    {
-        Color3f Lo(0.);
-        Intersection its;
-        if (!scene->rayIntersect(ray, its))
-            return scene->getBackground(ray);
-
-        // Iterate over all VPLs to compute their contribution
-        for (const VPL &vpl : m_vpls)
+        // normalize the VPLs
+        for (VPL &vpl : m_vpls)
         {
-            // Compute the vector from the shading point to the VPL
-            Vector3f lightDir = (vpl.position - its.p).normalized();
-            float distanceSquared = (vpl.position - its.p).squaredNorm();
-
-            // Check visibility (shadow ray)
-            Ray3f shadowRay(its.p, lightDir);
-            Intersection shadowIts;
-            if (scene->rayIntersect(shadowRay, shadowIts) && shadowIts.t <= std::sqrt(distanceSquared))
-                continue; // Skip if the VPL is occluded
-
-            // Compute the BRDF at the shading point
-            BSDFQueryRecord bsdfRec(its.toLocal(-ray.d), its.toLocal(lightDir), its.uv, ESolidAngle);
-            Color3f bsdfValue = its.mesh->getBSDF()->eval(bsdfRec);
-
-            // Compute the geometric term
-            float cosTheta = std::max(0.0f, its.shFrame.n.dot(lightDir));
-            float vplCosTheta = std::max(0.0f, vpl.normal.dot(-lightDir));
-            float geometryTerm = (cosTheta * vplCosTheta) / distanceSquared;
-
-            // Lo += its.shFrame.n.dot(vpl.normal) * its.mesh->getBSDF()->eval(bsdfRec);
-            //  Accumulate the VPL's contribution
-            Lo += bsdfValue * vpl.flux * geometryTerm / m_numVPLs;
+            vpl.flux /= m_vpls.size();
         }
-
-        return Lo;
     }
 
     std::string toString() const
@@ -123,16 +110,18 @@ public:
         return tfm::format(
             "VPLIntegrator[\n"
             "  num_vpls = %s,\n"
+            "  show_vpls = %s\n"
             "]",
-            m_numVPLs);
+            m_numVPLs,
+            m_showVPLs);
         return "VPLIntegrator []";
     }
 
 private:
     void generateIndirectVPLs(const Scene *scene, std::unique_ptr<Sampler> &sampler,
-                              const VPL &vpl, std::vector<VPL> &vpls)
+                              const VPL &vpl, const EmitterQueryRecord &dRec, std::vector<VPL> &vpls)
     {
-        Ray3f ray(vpl.position, Warp::squareToUniformHemisphere(sampler->next2D()));
+        Ray3f ray(vpl.position, dRec.wi);
         Color3f weight = vpl.flux;
         int depth = 0;
 
@@ -160,12 +149,20 @@ private:
             // Prepare for the next bounce
             weight *= bsdfValue;
             ray = Ray3f(its.p, its.toWorld(bRec.wo));
+
+            /* Prevent light leaks due to the use of shading normals -- [Veach, p. 158] */
+            float wiDotGeoN = its.geoFrame.n.dot(-ray.d);
+            float woDotGeoN = its.geoFrame.n.dot(its.toWorld(bRec.wo));
+            if (wiDotGeoN * Frame::cosTheta(bRec.wi) <= 0 ||
+                woDotGeoN * Frame::cosTheta(bRec.wo) <= 0)
+                break;
         }
     }
 
 private:
     std::vector<VPL> m_vpls;
     int m_numVPLs;
+    bool m_showVPLs;
 };
 
 NORI_REGISTER_CLASS(VPLIntegrator, "vpl");
