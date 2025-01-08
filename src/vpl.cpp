@@ -63,7 +63,7 @@ public:
             float geometryTerm = (cosTheta * vplCosTheta) / distanceSquared;
 
             //  Accumulate the VPL's contribution
-            Lo += (bsdfValue * vpl.flux * geometryTerm);
+            Lo += (bsdfValue * (vpl.flux / m_vpls.size()) * geometryTerm);
         }
 
         return Lo;
@@ -85,7 +85,7 @@ public:
 
             // Sample a position on the emitter
             EmitterQueryRecord pRec;
-            Color3f weight = emitter->sample(pRec, sampler->next2D(), 0.0f);
+            Color3f weight = emitter->sample(pRec, sampler->next2D(), 0.0f); // (pdfEmitter * m_numVPLs);
 
             // Sample a direction from the emitter
             EmitterQueryRecord dRec;
@@ -97,11 +97,6 @@ public:
 
             // Trace a random walk for indirect VPLs
             generateIndirectVPLs(scene, sampler, vpl, dRec.wi, m_vpls);
-        }
-        // normalize the VPLs
-        for (VPL &vpl : m_vpls)
-        {
-            vpl.flux /= m_vpls.size();
         }
     }
 
@@ -137,21 +132,31 @@ private:
             if (!bsdf)
                 break;
 
+            // Russian roulette termination
+            float rrProbability = std::min(weight.maxCoeff(), 1.0f);
+            if (sampler->next1D() > rrProbability)
+                break; // Terminate the path
+
+            // Scale weight to account for Russian roulette termination
+            weight /= rrProbability;
+
             // Sample the BSDF to find the next direction
             BSDFQueryRecord bRec(its.toLocal(-ray.d));
             Color3f bsdfValue = bsdf->sample(bRec, sampler->next2D());
             if (bsdfValue.isZero())
                 break;
 
+            // Update the weight with the sampled BSDF value and the PDF
+            weight *= bsdfValue;
+
             // Create a new VPL at this intersection
-            VPL indirectVPL(ESurfaceVPL, its.p, its.shFrame.n, weight * bsdfValue);
+            VPL indirectVPL(ESurfaceVPL, its.p, its.shFrame.n, weight);
             vpls.push_back(indirectVPL);
 
-            // Prepare for the next bounce
-            weight *= bsdfValue;
+            // Update the ray for the next iteration
             ray = Ray3f(its.p, its.toWorld(bRec.wo));
 
-            /* Prevent light leaks due to the use of shading normals -- [Veach, p. 158] */
+            // Prevent light leaks due to the use of shading normals -- [Veach, p. 158]
             float wiDotGeoN = its.geoFrame.n.dot(-ray.d);
             float woDotGeoN = its.geoFrame.n.dot(its.toWorld(bRec.wo));
             if (wiDotGeoN * Frame::cosTheta(bRec.wi) < -Epsilon ||
