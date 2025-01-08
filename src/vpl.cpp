@@ -14,8 +14,9 @@ class VPLIntegrator : public Integrator
 public:
     VPLIntegrator(const PropertyList &props)
     {
-        m_showVPLs = props.getBoolean("show_vpls", false);
         m_numVPLs = props.getInteger("num_vpls", 100);
+        m_maxDepth = props.getInteger("max_depth", 2);
+        m_showVPLs = props.getBoolean("show_vpls", false);
     }
 
     Color3f Li(const Scene *scene, Sampler *sampler, const Ray3f &ray) const
@@ -44,7 +45,7 @@ public:
             // Check visibility (shadow ray)
             Ray3f shadowRay(its.p, lightDir);
             Intersection shadowIts;
-            if (scene->rayIntersect(shadowRay, shadowIts) && shadowIts.t <= std::sqrt(distanceSquared))
+            if (scene->rayIntersect(shadowRay, shadowIts) && shadowIts.t * shadowIts.t <= distanceSquared)
                 continue; // Skip if the VPL is occluded
 
             // Highlight the VPLs in green
@@ -91,12 +92,11 @@ public:
             emitter->sampleDirection(pRec, dRec, sampler->next2D());
 
             // Add the initial VPL based on the emitter
-            Vector3f normal = (dRec.wi - pRec.p).normalized();
-            VPL vpl(EEmitterVPL, pRec.p, normal, weight);
+            VPL vpl(EEmitterVPL, pRec.p, pRec.n, weight);
             m_vpls.push_back(vpl);
 
             // Trace a random walk for indirect VPLs
-            generateIndirectVPLs(scene, sampler, vpl, dRec, m_vpls);
+            generateIndirectVPLs(scene, sampler, vpl, dRec.wi, m_vpls);
         }
         // normalize the VPLs
         for (VPL &vpl : m_vpls)
@@ -110,22 +110,23 @@ public:
         return tfm::format(
             "VPLIntegrator[\n"
             "  num_vpls = %s,\n"
+            "  max_depth = %s,\n"
             "  show_vpls = %s\n"
             "]",
             m_numVPLs,
+            m_maxDepth,
             m_showVPLs);
-        return "VPLIntegrator []";
     }
 
 private:
     void generateIndirectVPLs(const Scene *scene, std::unique_ptr<Sampler> &sampler,
-                              const VPL &vpl, const EmitterQueryRecord &dRec, std::vector<VPL> &vpls)
+                              const VPL &vpl, const Vector3f &direction, std::vector<VPL> &vpls)
     {
-        Ray3f ray(vpl.position, dRec.wi);
+        Ray3f ray(vpl.position, direction);
         Color3f weight = vpl.flux;
         int depth = 0;
 
-        while (depth++ < 3 && !weight.isZero())
+        while (depth++ <= m_maxDepth && !weight.isZero())
         {
             Intersection its;
             if (!scene->rayIntersect(ray, its))
@@ -153,8 +154,8 @@ private:
             /* Prevent light leaks due to the use of shading normals -- [Veach, p. 158] */
             float wiDotGeoN = its.geoFrame.n.dot(-ray.d);
             float woDotGeoN = its.geoFrame.n.dot(its.toWorld(bRec.wo));
-            if (wiDotGeoN * Frame::cosTheta(bRec.wi) <= 0 ||
-                woDotGeoN * Frame::cosTheta(bRec.wo) <= 0)
+            if (wiDotGeoN * Frame::cosTheta(bRec.wi) < -Epsilon ||
+                woDotGeoN * Frame::cosTheta(bRec.wo) < -Epsilon)
                 break;
         }
     }
@@ -163,6 +164,7 @@ private:
     std::vector<VPL> m_vpls;
     int m_numVPLs;
     bool m_showVPLs;
+    int m_maxDepth;
 };
 
 NORI_REGISTER_CLASS(VPLIntegrator, "vpl");

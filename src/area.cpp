@@ -85,6 +85,15 @@ public:
 		return eval(lRec);
 	}
 
+	virtual Color3f sampleDirection(const EmitterQueryRecord &pRec, EmitterQueryRecord &dRec, const Point2f &directionalSample) const
+	{
+		Vector3f local = Warp::squareToCosineHemisphere(directionalSample);
+		dRec.ref = pRec.p;
+		dRec.wi = Frame(pRec.n).toWorld(local);
+		dRec.pdf = Warp::squareToCosineHemispherePdf(local);
+		return Color3f(1.0f);
+	}
+
 	// Returns probability with respect to solid angle given by all the information inside the emitterqueryrecord.
 	// Assumes all information about the intersection point is already provided inside.
 	// WARNING: Use with care. Malformed EmitterQueryRecords can result in undefined behavior.

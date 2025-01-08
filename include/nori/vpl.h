@@ -15,7 +15,7 @@ namespace nori
     {
         Type type;
         Point3f position; // Position in the scene
-        Normal3f normal;  // Surface normal at the position
+        Vector3f normal;  // Surface normal at the position
         Color3f flux;     // Light flux carried by this VPL
 
         VPL(const Type type, const Vector3f &pos, const Vector3f &norm, const Color3f &flux)
