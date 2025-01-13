@@ -101,20 +101,6 @@ public:
     virtual Color3f sample(EmitterQueryRecord &lRec, const Point2f &sample, float optional_u) const = 0;
 
     /**
-     * \brief Sample the ray from emitter and return the importance weight (i.e. the
-     * value of the Emitter divided by the probability density
-     * of the sample with respect to solid angles).
-     *
-     * \param lRec    An emitter query record (only ref is needed)
-     * \param sample  A uniformly distributed sample on \f$[0,1]^2\f$
-     * \param u       Another optional sample that might be used in some scenarios.
-     *
-     * \return The emitter value divided by the probability density of the sample.
-     *         A zero value means that sampling failed.
-     */
-    virtual Color3f sampleDirection(const EmitterQueryRecord &pRec, EmitterQueryRecord &dRec, const Point2f &directionalSample) const {}
-
-    /**
      * \brief Compute the probability of sampling \c lRec.p.
      *
      * This method provides access to the probability density that
@@ -161,6 +147,11 @@ public:
      * \brief Set the mesh if the emitter is attached to a mesh
      * */
     void setMesh(Mesh *mesh) { m_mesh = mesh; }
+
+    /**
+     * \brief Get the mesh if the emitter is attached to a mesh
+     * */
+    Mesh *getMesh() const { return m_mesh; }
 
     EmitterType getEmitterType() const { return m_type; }
 

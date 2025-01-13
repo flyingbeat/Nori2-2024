@@ -5,21 +5,20 @@
 
 namespace nori
 {
-
-    enum Type
+    enum EVPLType
     {
-        EEmitterVPL,
-        ESurfaceVPL
-    }; // Direct or indirect VPL
+        DIRECT,
+        INDIRECT
+    };
+
     struct VPL
     {
-        Type type;
-        Point3f position; // Position in the scene
-        Vector3f normal;  // Surface normal at the position
-        Color3f flux;     // Light flux carried by this VPL
+        EmitterQueryRecord pRec; // EmitterQueryRecord of the VPL
+        Color3f flux;            // Light flux carried by this VPL
+        EVPLType type;           // Type of VPL
 
-        VPL(const Type type, const Vector3f &pos, const Vector3f &norm, const Color3f &flux)
-            : type(type), position(pos), normal(norm), flux(flux) {}
+        VPL(const EVPLType &type, const EmitterQueryRecord &pRec, const Color3f &flux)
+            : type(type), pRec(pRec), flux(flux) {}
     };
 
 }

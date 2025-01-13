@@ -26,6 +26,8 @@ public:
         if (!scene->rayIntersect(ray, its))
             return scene->getBackground(ray);
 
+        EmitterQueryRecord emitterRecord(its.p);
+
         if (its.mesh->isEmitter())
         {
             EmitterQueryRecord emitterRecord(ray.o);
@@ -39,31 +41,32 @@ public:
         for (const VPL &vpl : m_vpls)
         {
             // Compute the vector from the shading point to the VPL
-            Vector3f lightDir = (vpl.position - its.p).normalized();
-            float distanceSquared = (vpl.position - its.p).squaredNorm();
+            Vector3f lightDir = (vpl.pRec.p - its.p).normalized();
+            float distanceSquared = (vpl.pRec.p - its.p).squaredNorm();
 
             // Check visibility (shadow ray)
             Ray3f shadowRay(its.p, lightDir);
             Intersection shadowIts;
-            if (scene->rayIntersect(shadowRay, shadowIts) && shadowIts.t * shadowIts.t <= distanceSquared)
+            if (scene->rayIntersect(shadowRay, shadowIts) && shadowIts.t * shadowIts.t <= (distanceSquared - (Epsilon * Epsilon)))
                 continue; // Skip if the VPL is occluded
 
             // Highlight the VPLs in green
-            if (m_showVPLs && (vpl.position - its.p).norm() <= 0.01)
+            if (m_showVPLs && (vpl.pRec.p - its.p).norm() <= 0.015)
             {
                 return Color3f(0, 1, 0);
             }
+
             // Compute the BRDF at the shading point
             BSDFQueryRecord bsdfRec(its.toLocal(-ray.d), its.toLocal(lightDir), its.uv, ESolidAngle);
             Color3f bsdfValue = its.mesh->getBSDF()->eval(bsdfRec);
 
             // Compute the geometric term
             float cosTheta = std::max(0.0f, its.shFrame.n.dot(lightDir));
-            float vplCosTheta = std::max(0.0f, vpl.normal.dot(-lightDir));
+            float vplCosTheta = std::max(0.0f, vpl.pRec.n.dot(-lightDir));
             float geometryTerm = (cosTheta * vplCosTheta) / distanceSquared;
 
             //  Accumulate the VPL's contribution
-            Lo += (bsdfValue * (vpl.flux / m_vpls.size()) * geometryTerm);
+            Lo += vpl.flux * bsdfValue * geometryTerm;
         }
 
         return Lo;
@@ -85,18 +88,23 @@ public:
 
             // Sample a position on the emitter
             EmitterQueryRecord pRec;
-            Color3f weight = emitter->sample(pRec, sampler->next2D(), 0.0f); // (pdfEmitter * m_numVPLs);
+            Color3f Le = emitter->sample(pRec, sampler->next2D(), 0.0f);
+            pRec.emitter = emitter;
+            float pdfPoint = emitter->getMesh()->pdf(pRec.p);
 
-            // Sample a direction from the emitter
-            EmitterQueryRecord dRec;
-            emitter->sampleDirection(pRec, dRec, sampler->next2D());
+            Color3f flux = (Le / (pdfPoint * pdfEmitter));
 
-            // Add the initial VPL based on the emitter
-            VPL vpl(EEmitterVPL, pRec.p, pRec.n, weight);
+            //  Add the initial VPL based on the emitter
+            VPL vpl(DIRECT, pRec, flux);
             m_vpls.push_back(vpl);
 
             // Trace a random walk for indirect VPLs
-            generateIndirectVPLs(scene, sampler, vpl, dRec.wi, m_vpls);
+            generateIndirectVPLs(scene, sampler, vpl.flux, pRec, m_vpls);
+        }
+        // Normalize the VPLs' flux by the number of VPLs
+        for (VPL &vpl : m_vpls)
+        {
+            vpl.flux /= (float)m_numVPLs;
         }
     }
 
@@ -115,13 +123,17 @@ public:
 
 private:
     void generateIndirectVPLs(const Scene *scene, std::unique_ptr<Sampler> &sampler,
-                              const VPL &vpl, const Vector3f &direction, std::vector<VPL> &vpls)
+                              const Color3f &flux, const EmitterQueryRecord &pRec, std::vector<VPL> &vpls)
     {
-        Ray3f ray(vpl.position, direction);
-        Color3f weight = vpl.flux;
+        // Sample a direction from the emitter
+        Vector3f localDir = Warp::squareToCosineHemisphere(sampler->next2D());
+        // float dPdf = Warp::squareToCosineHemispherePdf(localDir);
+        Vector3f worldDir = Frame(pRec.n).toWorld(localDir);
+        Ray3f ray(pRec.p, worldDir);
+        Color3f weight = flux; // dPdf;
         int depth = 0;
 
-        while (depth++ <= m_maxDepth && !weight.isZero())
+        while (depth++ < m_maxDepth && !weight.isZero())
         {
             Intersection its;
             if (!scene->rayIntersect(ray, its))
@@ -131,14 +143,6 @@ private:
             const BSDF *bsdf = its.mesh->getBSDF();
             if (!bsdf)
                 break;
-
-            // Russian roulette termination
-            float rrProbability = std::min(weight.maxCoeff(), 1.0f);
-            if (sampler->next1D() > rrProbability)
-                break; // Terminate the path
-
-            // Scale weight to account for Russian roulette termination
-            weight /= rrProbability;
 
             // Sample the BSDF to find the next direction
             BSDFQueryRecord bRec(its.toLocal(-ray.d));
@@ -150,18 +154,22 @@ private:
             weight *= bsdfValue;
 
             // Create a new VPL at this intersection
-            VPL indirectVPL(ESurfaceVPL, its.p, its.shFrame.n, weight);
+            EmitterQueryRecord pRec;
+            pRec.p = its.p;
+            pRec.n = its.shFrame.n;
+            VPL indirectVPL(INDIRECT, pRec, weight);
             vpls.push_back(indirectVPL);
+
+            // Russian roulette termination
+            float rrProbability = std::min(weight.maxCoeff(), 1.0f);
+            if (sampler->next1D() > rrProbability)
+                break; // Terminate the path
+
+            // Scale weight to account for Russian roulette termination
+            weight /= rrProbability;
 
             // Update the ray for the next iteration
             ray = Ray3f(its.p, its.toWorld(bRec.wo));
-
-            // Prevent light leaks due to the use of shading normals -- [Veach, p. 158]
-            float wiDotGeoN = its.geoFrame.n.dot(-ray.d);
-            float woDotGeoN = its.geoFrame.n.dot(its.toWorld(bRec.wo));
-            if (wiDotGeoN * Frame::cosTheta(bRec.wi) < -Epsilon ||
-                woDotGeoN * Frame::cosTheta(bRec.wo) < -Epsilon)
-                break;
         }
     }
 
